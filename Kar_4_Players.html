@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <!-- รองรับ iOS/iPadOS safe area และ dvh -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Snooker Scoreboard</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+        body {
+            margin: 0;
+            font-family: 'Share Tech Mono', monospace;
+            background-color: #111;
+            color: #fff;
+
+            /* ใช้ dvh + fallback */
+            height: 100vh;
+            height: 100dvh;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            transition: background-image 0.5s ease-in-out;
+        }
+
+        body.background-active {
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr auto;
+            gap: 10px;
+            width: 100%;
+            height: 100%;
+            max-height: 100vh;
+            max-height: 100dvh;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .player-container {
+            position: relative;
+            border: 3px solid #444;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            overflow: hidden;
+            height: 96%;
+            cursor: pointer;
+            transition: background-color 0.5s ease;
+        }
+
+        .player-name {
+            font-size: 5vmin;
+            font-weight: bold;
+            text-shadow: 2px 2px 5px black;
+            margin-bottom: 5px;
+            cursor: text;
+        }
+
+        .player-frame-score {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            font-size: 7.2vmin;
+            color: gold;
+            font-weight: bold;
+            cursor: text;
+        }
+
+        .player-score {
+            font-size: 24.5vmin;
+            font-weight: bold;
+            transition: font-size 0.3s ease;
+        }
+
+        .player-score.three-digits {
+            font-size: 20vmin;
+        }
+
+        .player-score.negative-score {
+            color: #ff4d4d;
+        }
+
+        /* ----- Start of new styles for Special Score ----- */
+        .special-score-container {
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            font-size: 4vmin;
+        }
+        
+        .special-score-value {
+            font-size: 8vmin;
+            color: #ff4d4d;
+            font-weight: bold;
+        }
+
+        /* --- Keypad --- */
+        .kar-keypad-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        .kar-keypad-container {
+            background-color: #333;
+            border: 2px solid #555;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            width: 90%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .kar-keypad-display {
+            background-color: #222;
+            color: #fff;
+            padding: 15px;
+            font-size: 2.5em;
+            text-align: right;
+            border-radius: 8px;
+            border: 1px solid #444;
+            min-height: 1.5em;
+        }
+
+        .kar-keypad-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .kar-keypad-button {
+            padding: 20px;
+            font-size: 1.8em;
+            background-color: #444;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            transition: background-color 0.1s;
+        }
+
+        .kar-keypad-button:hover { background-color: #555; }
+        .kar-keypad-button:active { background-color: #222; }
+
+        .kar-keypad-button.op { background-color: #e67e22; }
+        .kar-keypad-button.op:hover { background-color: #d35400; }
+        .kar-keypad-button.op:active { background-color: #a04000; }
+
+        .kar-keypad-button.equal { background-color: #2ecc71; }
+        .kar-keypad-button.equal:hover { background-color: #27ae60; }
+        .kar-keypad-button.equal:active { background-color: #1e8449; }
+
+        .kar-keypad-button.clear { background-color: #e74c3c; }
+        .kar-keypad-button.clear:hover { background-color: #c0392b; }
+        .kar-keypad-button.clear:active { background-color: #a72d20; }
+        
+        .kar-keypad-button.ok { background-color: #3498db; }
+        .kar-keypad-button.ok:hover { background-color: #2980b9; }
+        .kar-keypad-button.ok:active { background-color: #2471a3; }
+        
+        .kar-keypad-button.backspace { background-color: #7f8c8d; }
+        .kar-keypad-button.backspace:hover { background-color: #6c7a7b; }
+        .kar-keypad-button.backspace:active { background-color: #586667; }
+        
+        .kar-keypad-button.current-score {
+            font-size: 1.5em;
+            background-color: #555;
+            color: #FFD700;
+            grid-column: span 2;
+        }
+        /* ----- End of new styles for Special Score ----- */
+
+        .control-container {
+            grid-column: 1 / 3;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: nowrap;
+            gap: 12px;
+            padding: 10px;
+            background-color: #013220;
+            border: 3px solid #006400;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .snooker-ball, .action-button, .sign-button {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 20px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.6);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .snooker-ball:active,
+        .action-button:active,
+        .sign-button:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.6);
+        }
+
+        /* Player Container Colors */
+        #playerA { background-color: #024731; }
+        #playerB { background-color: #1b3a6f; }
+        #playerC { background-color: #5c2751; }
+        #playerD { background-color: #7a3b00; }
+
+        /* Semi-transparent colors for players when background image is active */
+        body.background-active #playerA { background-color: rgba(2, 71, 49, 0.7); }
+        body.background-active #playerB { background-color: rgba(27, 58, 111, 0.7); }
+        body.background-active #playerC { background-color: rgba(92, 39, 81, 0.7); }
+        body.background-active #playerD { background-color: rgba(122, 59, 0, 0.7); }
+
+        .snooker-ball {
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8), rgba(0,0,0,0.6));
+            color: white;
+        }
+        .red { background: radial-gradient(circle at 30% 30%, #ff6666, #880000); }
+        .yellow { background: radial-gradient(circle at 30% 30%, #ffffaa, #999900); color: black; }
+        .green { background: radial-gradient(circle at 30% 30%, #66ff66, #004d00); }
+        .brown { background: radial-gradient(circle at 30% 30%, #d2a679, #4d2600); }
+        .blue { background: radial-gradient(circle at 30% 30%, #66a3ff, #001f4d); }
+        .pink { background: radial-gradient(circle at 30% 30%, #ffb3d9, #800040); }
+        .black { background: radial-gradient(circle at 30% 30%, #666666, #000000); color: white; }
+        .gold { background: radial-gradient(circle at 30% 30%, #fff5b3, #b38f00); color: black; }
+
+        .action-button.setzero {
+            background: linear-gradient(to bottom, #ffcc66, #cc6600);
+            border-radius: 15px;
+            width: 100px;
+        }
+
+        .sign-button {
+            background: linear-gradient(to bottom, #1e3c9a, #2a5bb2);
+            color: white;
+            font-size: 28px;
+            border-radius: 15px;
+            width: 80px;
+        }
+
+        .sign-button.active {
+            background: linear-gradient(to bottom, #ff1a1a, #800000);
+        }
+
+        .action-button.undo {
+            background: linear-gradient(to bottom, #ff4d4d, #800000);
+            border-radius: 15px;
+            width: 100px;
+        }
+
+        .action-button.finish {
+            background: linear-gradient(to bottom, #66ff66, #006600);
+            border-radius: 15px;
+            width: 100px;
+        }
+
+        .action-button.home-button {
+            background-color: #FFD700;
+            color: black;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            font-size: 28px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0;
+        }
+
+        .action-button.cg-button {
+            background: linear-gradient(to bottom, #7a7aff, #3c3c7a);
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            font-size: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0;
+            font-weight: bold;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="player-container" id="playerA">
+            <div class="special-score-container" onclick="openKeypad('playerA')">
+                <span id="specialScoreA" class="special-score-value">0</span>
+            </div>
+            <div class="player-name" contenteditable="true">PLAYER A</div>
+            <div class="player-frame-score" contenteditable="true">0</div>
+            <div class="player-score">0</div>
+        </div>
+        <div class="player-container" id="playerB">
+            <div class="special-score-container" onclick="openKeypad('playerB')">
+                <span id="specialScoreB" class="special-score-value">0</span>
+            </div>
+            <div class="player-name" contenteditable="true">PLAYER B</div>
+            <div class="player-frame-score" contenteditable="true">0</div>
+            <div class="player-score">0</div>
+        </div>
+        <div class="player-container" id="playerC">
+            <div class="special-score-container" onclick="openKeypad('playerC')">
+                <span id="specialScoreC" class="special-score-value">0</span>
+            </div>
+            <div class="player-name" contenteditable="true">PLAYER C</div>
+            <div class="player-frame-score" contenteditable="true">0</div>
+            <div class="player-score">0</div>
+        </div>
+        <div class="player-container" id="playerD">
+            <div class="special-score-container" onclick="openKeypad('playerD')">
+                <span id="specialScoreD" class="special-score-value">0</span>
+            </div>
+            <div class="player-name" contenteditable="true">PLAYER D</div>
+            <div class="player-frame-score" contenteditable="true">0</div>
+            <div class="player-score">0</div>
+        </div>
+
+        <div class="control-container">
+            <button class="action-button cg-button" onclick="changeBackground()">CG</button>
+            <button class="action-button home-button" onclick="window.location.href='index.html';">🏡</button>
+            <button class="action-button setzero" onclick="resetAll()">Set Zero</button>
+
+            <button class="snooker-ball red" onclick="addScore(1)">1</button>
+            <button class="snooker-ball yellow" onclick="addScore(2)">2</button>
+            <button class="snooker-ball green" onclick="addScore(3)">3</button>
+            <button class="snooker-ball brown" onclick="addScore(4)">4</button>
+            <button class="snooker-ball blue" onclick="addScore(5)">5</button>
+            <button class="snooker-ball pink" onclick="addScore(6)">6</button>
+            <button class="snooker-ball black" onclick="addScore(7)">7</button>
+            <button class="snooker-ball gold" onclick="addScore(10)">10</button>
+
+            <button class="sign-button" id="signBtn" onclick="toggleSign()">-</button>
+
+            <button class="action-button undo" onclick="undo()">Undo</button>
+            <button class="action-button finish" onclick="finishFrame()">Finish</button>
+        </div>
+    </div>
+
+    <!-- Keypad Modal -->
+    <div id="karKeypadOverlay" class="kar-keypad-overlay">
+        <div class="kar-keypad-container">
+            <button class="kar-keypad-button current-score" id="karCurrentScoreDisplay"></button>
+            <div id="karKeypadDisplay" class="kar-keypad-display">0</div>
+            <div class="kar-keypad-grid">
+                <!-- Calculator-style keypad -->
+                <button class="kar-keypad-button">7</button>
+                <button class="kar-keypad-button">8</button>
+                <button class="kar-keypad-button">9</button>
+                <button class="kar-keypad-button op" data-op="plus">+</button>
+                <button class="kar-keypad-button">4</button>
+                <button class="kar-keypad-button">5</button>
+                <button class="kar-keypad-button">6</button>
+                <button class="kar-keypad-button op" data-op="minus">-</button>
+                <button class="kar-keypad-button">1</button>
+                <button class="kar-keypad-button">2</button>
+                <button class="kar-keypad-button">3</button>
+                <button class="kar-keypad-button backspace">&#x232b;</button>
+                <button class="kar-keypad-button">0</button>
+                <button class="kar-keypad-button clear">C</button>
+                <button class="kar-keypad-button equal">=</button>
+                <button class="kar-keypad-button ok">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ป้องกัน pinch-zoom
+        document.addEventListener('gesturestart', e => e.preventDefault());
+
+        /* ------------------ AUDIO ------------------ */
+        let undoSynth;
+        let audioInitialized = false;
+
+        function initAudio() {
+            if (audioInitialized) return;
+            try {
+                Tone.start();
+
+                // เสียง Undo
+                undoSynth = new Tone.Synth({
+                    oscillator: { type: "sawtooth" },
+                    envelope: { attack: 0.01, decay: 0.3, sustain: 0.05, release: 0.4 }
+                }).toDestination();
+
+                audioInitialized = true;
+            } catch (e) {
+                console.error("Audio init failed:", e);
+            }
+        }
+
+        function playUndoSound() {
+            if (audioInitialized) {
+                undoSynth.triggerAttackRelease("E3", "8n");
+                setTimeout(() => undoSynth.triggerAttackRelease("C3", "8n"), 120);
+            }
+        }
+        
+        // initAudio เมื่อแตะครั้งแรก
+        document.addEventListener("pointerdown", () => initAudio(), { once: true });
+        document.addEventListener("touchstart", () => initAudio(), { once: true });
+
+        /* ------------------ TTS ------------------ */
+        let ttsVoice = null;
+        let ttsInitialized = false;
+
+        function chooseEnglishLikeVoice(voices) {
+            if (!voices || voices.length === 0) return null;
+            let v = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en-us'));
+            if (!v) v = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en-gb'));
+            if (!v) v = voices.find(v => /english/i.test(v.name));
+            return v || voices[0];
+        }
+
+        function initTTS() {
+            if (!('speechSynthesis' in window)) return;
+            try {
+                const voices = speechSynthesis.getVoices();
+                if (voices && voices.length > 0) {
+                    ttsVoice = chooseEnglishLikeVoice(voices);
+                    const warm = new SpeechSynthesisUtterance(' ');
+                    warm.volume = 0;
+                    warm.lang = (ttsVoice && ttsVoice.lang) ? ttsVoice.lang : 'en-US';
+                    if (ttsVoice) warm.voice = ttsVoice;
+                    speechSynthesis.speak(warm);
+                    ttsInitialized = true;
+                } else {
+                    speechSynthesis.onvoiceschanged = () => {
+                        const vs = speechSynthesis.getVoices();
+                        ttsVoice = chooseEnglishLikeVoice(vs);
+                        const warm = new SpeechSynthesisUtterance(' ');
+                        warm.volume = 0;
+                        warm.lang = (ttsVoice && ttsVoice.lang) ? ttsVoice.lang : 'en-US';
+                        if (ttsVoice) warm.voice = ttsVoice;
+                        speechSynthesis.speak(warm);
+                        ttsInitialized = true;
+                    };
+                }
+            } catch (e) { ttsInitialized = false; }
+        }
+
+        function installTTSUnlock() {
+            function unlock() {
+                initTTS();
+                document.removeEventListener('pointerdown', unlock, {capture:true});
+                document.removeEventListener('keydown', unlock, {capture:true});
+            }
+            document.addEventListener('pointerdown', unlock, {once: true, capture:true});
+            document.addEventListener('keydown', unlock, {once: true, capture:true});
+        }
+        
+        // ขานคะแนนที่ได้ (เช่น "Seven point")
+        function speakPointAdded(points) {
+            if (!('speechSynthesis' in window) || !ttsInitialized) return;
+            window.speechSynthesis.cancel();
+            const textToSpeak = `${points} point`;
+            const uPoint = new SpeechSynthesisUtterance(textToSpeak);
+            uPoint.lang = (ttsVoice && ttsVoice.lang) ? ttsVoice.lang : 'en-US';
+            if (ttsVoice) uPoint.voice = ttsVoice;
+            try {
+                speechSynthesis.speak(uPoint);
+            } catch (e) { console.error("TTS points speak failed", e); }
+        }
+
+        // ขานคะแนนรวม
+        function speakScore(points) {
+            if (!('speechSynthesis' in window) || !ttsInitialized) return;
+            window.speechSynthesis.cancel();
+            const textToSpeak = `${points}`;
+            const uScore = new SpeechSynthesisUtterance(textToSpeak);
+            uScore.lang = (ttsVoice && ttsVoice.lang) ? ttsVoice.lang : 'en-US';
+            if (ttsVoice) uScore.voice = ttsVoice;
+            try {
+                speechSynthesis.speak(uScore);
+            } catch (e) { console.error("TTS score speak failed", e); }
+        }
+
+        function speakFoul() {
+            if (!('speechSynthesis' in window) || !ttsInitialized) return;
+            window.speechSynthesis.cancel();
+            const uFoul = new SpeechSynthesisUtterance("Foul");
+            uFoul.lang = (ttsVoice && ttsVoice.lang) ? ttsVoice.lang : 'en-US';
+            if (ttsVoice) uFoul.voice = ttsVoice;
+            try {
+                speechSynthesis.speak(uFoul);
+            } catch (e) { console.error("TTS foul speak failed", e); }
+        }
+
+        function speakMinusPoint(points) {
+            if (!('speechSynthesis' in window) || !ttsInitialized) return;
+            window.speechSynthesis.cancel();
+            const textToSpeak = `Minus ${points}`;
+            const uMinusPoint = new SpeechSynthesisUtterance(textToSpeak);
+            uMinusPoint.lang = (ttsVoice && ttsVoice.lang) ? ttsVoice.lang : 'en-US';
+            if (ttsVoice) uMinusPoint.voice = ttsVoice;
+            try {
+                speechSynthesis.speak(uMinusPoint);
+            } catch (e) { console.error("TTS speak minus point failed", e); }
+        }
+
+        function speakWinner(winnerName) {
+            if (!('speechSynthesis' in window) || !ttsInitialized) return;
+            window.speechSynthesis.cancel();
+            
+            const uWinner = new SpeechSynthesisUtterance(`${winnerName} win a frame`);
+            uWinner.lang = (ttsVoice && ttsVoice.lang) ? uWinner.lang : 'en-US';
+            if (ttsVoice) uWinner.voice = ttsVoice;
+            try {
+                speechSynthesis.speak(uWinner);
+            } catch (e) { console.error("TTS winner speak failed", e); }
+        }
+
+        /* ------------------ DATA ------------------ */
+        let players = {
+            playerA: { score: 0, frame: 0, specialScore: 0 },
+            playerB: { score: 0, frame: 0, specialScore: 0 },
+            playerC: { score: 0, frame: 0, specialScore: 0 },
+            playerD: { score: 0, frame: 0, specialScore: 0 }
+        };
+        let activePlayerId = "playerA";
+        let scoreHistory = [];
+        let scoreSign = 1;
+        let isMinusMode = false;
+        let keypadTargetPlayerId = null;
+
+        // Background image data and state
+        const bgImages = [
+            'Background/CothSS.jpg',
+            'Background/image1.jpg',
+            'Background/image2.jpg',
+            'Background/image3.jpg',
+            'Background/image4.jpg'
+        ];
+        let currentBgIndex = -1;
+        
+        // Function to preload an image
+        function preloadImage(url) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(url);
+                img.onerror = () => reject(new Error(`Failed to load image at ${url}`));
+                img.src = url;
+            });
+        }
+        
+        async function changeBackground() {
+            currentBgIndex++;
+            if (currentBgIndex >= bgImages.length) {
+                currentBgIndex = -1; // Reset to solid background
+            }
+            
+            const bodyEl = document.body;
+            
+            if (currentBgIndex === -1) {
+                bodyEl.style.backgroundImage = 'none';
+                bodyEl.style.backgroundColor = '#111';
+                bodyEl.classList.remove('background-active');
+            } else {
+                try {
+                    const imageUrl = bgImages[currentBgIndex];
+                    await preloadImage(imageUrl);
+                    bodyEl.style.backgroundImage = `url('${imageUrl}')`;
+                    bodyEl.classList.add('background-active');
+                } catch (error) {
+                    console.error(error.message);
+                    changeBackground();
+                }
+            }
+        }
+
+        function setActivePlayer(playerId) {
+            activePlayerId = playerId;
+            document.querySelectorAll('.player-container').forEach(p => {
+                p.style.borderColor = "#444";
+            });
+            document.getElementById(playerId).style.borderColor = "gold";
+            isMinusMode = false;
+            scoreSign = 1;
+            document.getElementById("signBtn").classList.remove('active');
+            
+            const nameEl = document.querySelector(`#${playerId} .player-name`);
+            const playerName = nameEl.textContent.trim();
+            if (playerName) {
+                const uPlayer = new SpeechSynthesisUtterance(playerName);
+                uPlayer.lang = (ttsVoice && ttsVoice.lang) ? uPlayer.lang : 'en-US';
+                if (ttsVoice) uPlayer.voice = ttsVoice;
+                try {
+                    speechSynthesis.speak(uPlayer);
+                } catch (e) { console.error("TTS player name speak failed", e); }
+            }
+        }
+
+        document.querySelectorAll('.player-container').forEach(p => {
+            p.addEventListener('click', () => setActivePlayer(p.id));
+        });
+
+        function updateScoreDisplay(playerId) {
+            const player = players[playerId];
+            const scoreEl = document.querySelector(`#${playerId} .player-score`);
+            scoreEl.textContent = player.score;
+            document.querySelector(`#${playerId} .player-frame-score`).textContent = player.frame;
+            document.querySelector(`#specialScore${playerId.slice(-1)}`).textContent = player.specialScore;
+
+            if (Math.abs(player.score) >= 100) {
+                scoreEl.classList.add('three-digits');
+            } else {
+                scoreEl.classList.remove('three-digits');
+            }
+
+            if (player.score < 0) {
+                scoreEl.classList.add('negative-score');
+            } else {
+                scoreEl.classList.remove('negative-score');
+            }
+        }
+
+        function addScore(points) {
+            let player = players[activePlayerId];
+            
+            const actualPoints = points * scoreSign;
+            scoreHistory.push({ type: "score", playerId: activePlayerId, pointsAdded: actualPoints, prevScore: player.score });
+            
+            player.score += actualPoints;
+            updateScoreDisplay(activePlayerId);
+            
+            if (scoreSign === 1) {
+                speakPointAdded(actualPoints);
+            } else if (scoreSign === -1) {
+                speakMinusPoint(points);
+            }
+            
+            setTimeout(() => {
+                speakScore(player.score);
+            }, 1100);
+        }
+
+        function resetAll() {
+            const snapshot = JSON.parse(JSON.stringify(players));
+            scoreHistory.push({ type: "resetAll", snapshot });
+            for (const id in players) {
+                players[id].score = 0;
+                updateScoreDisplay(id);
+            }
+        }
+
+        function toggleSign() {
+            const signBtn = document.getElementById("signBtn");
+            if (isMinusMode) {
+                isMinusMode = false;
+                scoreSign = 1;
+                signBtn.classList.remove('active');
+            } else {
+                isMinusMode = true;
+                scoreSign = -1;
+                signBtn.classList.add('active');
+                speakFoul();
+            }
+        }
+
+        function undo() {
+            let last = scoreHistory.pop();
+            // Loop to skip special score entries
+            while (last && last.type === "special_score") {
+                last = scoreHistory.pop();
+            }
+            
+            if (!last) return;
+
+            if (last.type === "score") {
+                const pid = last.playerId;
+                players[pid].score = last.prevScore;
+                updateScoreDisplay(pid);
+                playUndoSound();
+            } else if (last.type === "resetAll" || last.type === "finish") {
+                players = last.snapshot;
+                for (const id in players) updateScoreDisplay(id);
+                playUndoSound();
+            }
+        }
+
+        function finishFrame() {
+            const snapshot = JSON.parse(JSON.stringify(players));
+
+            const allScoresAreZero = Object.values(players).every(p => p.score === 0);
+            if (allScoresAreZero) {
+                return;
+            }
+
+            let maxScore = -Infinity;
+            const playerIds = Object.keys(players);
+            
+            for (const id of playerIds) {
+                if (players[id].score > maxScore) {
+                    maxScore = players[id].score;
+                }
+            }
+
+            const highestScorers = playerIds.filter(id => players[id].score === maxScore);
+
+            let winner = null;
+            if (highestScorers.length === 1) {
+                // ถ้ามีคนเดียวก็เป็นผู้ชนะ
+                winner = highestScorers[0];
+            } else if (highestScorers.length > 1) {
+                // ถ้ามีหลายคน ต้องหาว่าใครทำคะแนนสูงสุดเป็นคนสุดท้าย
+                for (let i = scoreHistory.length - 1; i >= 0; i--) {
+                    const historyItem = scoreHistory[i];
+                    if (historyItem.type === "score" && highestScorers.includes(historyItem.playerId) && players[historyItem.playerId].score === maxScore) {
+                        winner = historyItem.playerId;
+                        break;
+                    }
+                }
+            }
+
+            if (winner) {
+                players[winner].frame++;
+                const winnerNameEl = document.querySelector(`#${winner} .player-name`);
+                const winnerName = winnerNameEl.textContent.trim();
+                speakWinner(winnerName);
+            }
+            
+            // Reset scores for the new frame
+            scoreHistory.push({ type: "finish", snapshot });
+            for (const id in players) {
+                players[id].score = 0;
+                updateScoreDisplay(id);
+            }
+        }
+        
+        // Keypad variables and functions
+        let karKeypadOverlay, karKeypadDisplay, currentEditingPlayerId;
+        let karCalculatorTotal = 0;
+        let pendingValue = '';
+        let pendingOperation = null;
+
+        window.onload = () => {
+            initTTS();
+            installTTSUnlock();
+            setActivePlayer("playerA");
+            for (const id in players) updateScoreDisplay(id);
+
+            karKeypadOverlay = document.getElementById('karKeypadOverlay');
+            karKeypadDisplay = document.getElementById('karKeypadDisplay');
+            
+            // Event listener for all keypad buttons
+            document.querySelectorAll('.kar-keypad-button').forEach(button => {
+                button.addEventListener('click', () => {
+                    const value = button.textContent;
+                    const op = button.dataset.op;
+
+                    // Clear button
+                    if (button.classList.contains('clear')) {
+                        karCalculatorTotal = 0;
+                        pendingValue = '';
+                        pendingOperation = null;
+                        karKeypadDisplay.textContent = '0';
+                    }
+                    // OK button
+                    else if (button.classList.contains('ok')) {
+                        const finalValue = pendingValue === '' ? karCalculatorTotal : applyOperation(karCalculatorTotal, pendingOperation, parseInt(pendingValue));
+                        
+                        // Check if the final value is a valid number before pushing to history
+                        const finalScore = isNaN(finalValue) ? 0 : finalValue;
+                        
+                        scoreHistory.push({ type: "special_score", playerId: currentEditingPlayerId, prevScore: players[currentEditingPlayerId].specialScore });
+                        players[currentEditingPlayerId].specialScore = finalScore;
+                        updateScoreDisplay(currentEditingPlayerId);
+                        karKeypadOverlay.style.display = 'none';
+                        karCalculatorTotal = 0;
+                        pendingValue = '';
+                        pendingOperation = null;
+                    }
+                    // Equal button
+                    else if (button.classList.contains('equal')) {
+                        if (pendingOperation && pendingValue !== '') {
+                            karCalculatorTotal = applyOperation(karCalculatorTotal, pendingOperation, parseInt(pendingValue));
+                            karKeypadDisplay.textContent = karCalculatorTotal;
+                            pendingValue = '';
+                            pendingOperation = null;
+                        }
+                    }
+                    // Operation button (+, -)
+                    else if (button.classList.contains('op')) {
+                        if (pendingValue !== '') {
+                            karCalculatorTotal = applyOperation(karCalculatorTotal, pendingOperation, parseInt(pendingValue));
+                            pendingValue = '';
+                        }
+                        pendingOperation = op;
+                        karKeypadDisplay.textContent = `${karCalculatorTotal} ${value}`;
+                    }
+                    // Backspace button
+                    else if (button.classList.contains('backspace')) {
+                        if (pendingValue.length > 0) {
+                            pendingValue = pendingValue.slice(0, -1);
+                            if (pendingValue === '') {
+                                karKeypadDisplay.textContent = pendingOperation ? `${karCalculatorTotal} ${pendingOperation === 'plus' ? '+' : '-'}` : karCalculatorTotal;
+                            } else {
+                                const tempResult = applyOperation(karCalculatorTotal, pendingOperation, parseInt(pendingValue));
+                                karKeypadDisplay.textContent = tempResult;
+                            }
+                        }
+                    }
+                    // Number button
+                    else {
+                        if (pendingValue.length > 2) return;
+                        pendingValue += value;
+                        const tempResult = applyOperation(karCalculatorTotal, pendingOperation, parseInt(pendingValue));
+                        karKeypadDisplay.textContent = tempResult;
+                    }
+                });
+            });
+
+            // Open keypad when special score is clicked
+            document.querySelectorAll('.special-score-container').forEach(element => {
+                element.addEventListener('click', (event) => {
+                    const playerId = event.currentTarget.closest('.player-container').id;
+                    openKeypad(playerId);
+                });
+            });
+        };
+
+        function openKeypad(playerId) {
+            currentEditingPlayerId = playerId;
+            karCalculatorTotal = players[currentEditingPlayerId].specialScore;
+            pendingValue = '';
+            pendingOperation = null;
+            document.getElementById('karCurrentScoreDisplay').textContent = karCalculatorTotal;
+            karKeypadDisplay.textContent = karCalculatorTotal;
+            karKeypadOverlay.style.display = 'flex';
+        }
+
+        function applyOperation(total, operation, value) {
+            value = isNaN(value) ? 0 : value;
+            switch (operation) {
+                case 'plus':
+                    return total + value;
+                case 'minus':
+                    return total - value;
+                default:
+                    return value;
+            }
+        }
+    </script>
+</body>
+</html>

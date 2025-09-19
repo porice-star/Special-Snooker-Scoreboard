@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Snooker Scoreboard (3 Players)</title>
+    <style>
+        /* Font from Google Fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+        /* Basic Body and HTML styling */
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            background-color: #006400; /* Dark green for snooker table feel */
+            color: white;
+            font-family: 'Share Tech Mono', monospace;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: repeat(2, 1fr);
+            gap: 1.5vh 1.5vw;
+            padding: 2.5vh 2.5vw;
+            box-sizing: border-box;
+            touch-action: manipulation;
+            transition: background-image 0.5s ease-in-out, background-color 0.5s ease-in-out;
+            background-size: cover;
+            background-position: center;
+        }
+
+        body.darken-background::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            z-index: -1;
+        }
+
+        /* Player containers - now using Flexbox for stable layout */
+        .player-container {
+            display: grid; /* Use grid for a more stable layout */
+            grid-template-rows: auto 1fr; /* Row for name, and a flexible row for score */
+            grid-template-columns: 1fr;
+            
+            border: 2px solid #555;
+            border-radius: 10px;
+            padding: 10px;
+            box-sizing: border-box;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            height: 100%;
+        }
+
+        .player-container.active {
+            border-color: #FFFF00;
+            background-color: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 15px rgba(255, 255, 0, 0.5);
+        }
+
+        /* Unique background colors for each player in green tone */
+        .player-container.player-a {
+            grid-area: 1 / 1 / 2 / 2;
+            background-color: rgba(144, 238, 144, 0.3); /* Light Green */
+        }
+
+        .player-container.player-b {
+            grid-area: 1 / 2 / 2 / 3;
+            background-color: rgba(60, 179, 113, 0.4); /* Medium Sea Green */
+        }
+
+        .player-container.player-c {
+            grid-area: 2 / 1 / 3 / 2;
+            background-color: rgba(0, 128, 0, 0.5); /* Green */
+        }
+
+        /* Name wrapper to hold player name and prevent its size from changing */
+        .player-name-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+            flex-shrink: 0;
+            width: 100%;
+        }
+
+        .player-name {
+            font-size: 5vmin;
+            font-weight: bold;
+            color: #FFFFFF;
+            width: auto;
+            border: none;
+            background: none;
+            outline: none;
+            padding: 0;
+            text-shadow:
+                -2px -2px 0 #000,
+                2px -2px 0 #000,
+                -2px 2px 0 #000,
+                2px 2px 0 #000,
+                0 0 10px #fff;
+            cursor: pointer;
+            text-align: center;
+            transition: transform 0.2s ease;
+            margin-right: 10px;
+            min-height: 5vmin;
+        }
+
+        .player-name.editing {
+            color: #FF0000;
+        }
+
+        .player-frame-score {
+            font-size: 7.5vmin;
+            font-weight: bold;
+            color: #FFFF00;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5), 0 0 5px #FFFF00;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            position: absolute;
+            top: 5%;
+            right: 5%;
+            transform: translate(0, 0);
+            z-index: 10;
+        }
+        
+        .player-frame-score:active {
+            transform: scale(0.95);
+        }
+
+        /* New styles for special score and button */
+        .special-score {
+            font-size: 7.5vmin;
+            font-weight: bold;
+            color: #FF0000;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5), 0 0 5px #FF0000;
+            position: absolute;
+            top: 5%;
+            left: 5%;
+            z-index: 20; /* Increased z-index to be on top of other elements */
+        }
+
+        .special-score-button {
+            width: 9vmin; /* Adjusted to be 10% smaller */
+            height: 9vmin; /* Adjusted to be 10% smaller */
+            border-radius: 50%;
+            border: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 4.05vmin; /* Adjusted font size to scale with button */
+            font-weight: bold;
+            cursor: pointer;
+            aspect-ratio: 1 / 1;
+            position: relative;
+            transform: translateY(0);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+            
+            /* Realistic 3D and floating effects for red star button */
+            background: 
+                radial-gradient(circle at 15% 15%, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 20%),
+                radial-gradient(circle at 30% 30%, #FF6B6B 0%, #E53935 80%);
+            box-shadow: 
+                0 0 15px rgba(255, 255, 255, 0.3),
+                inset 0 0 20px rgba(0, 0, 0, 0.4),
+                0 15px 30px rgba(0, 0, 0, 0.6);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+            margin-right: 2.5vw; /* Adjusted margin to increase spacing */
+        }
+        
+        .special-score-button:active {
+            transform: translateY(2px);
+            box-shadow: 0 0 5px rgba(255, 255, 255, 0.1), inset 0 0 5px rgba(0, 0, 0, 0.2), 0 5px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .player-score-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .player-score {
+            font-size: 25vmin;
+            font-weight: normal;
+            text-shadow: 0 0 10px #00FFFF, 0 0 20px #00FFFF;
+            color: #00FFFF;
+            line-height: 1;
+            transition: font-size 0.2s ease, color 0.2s ease;
+            cursor: default; /* Changed cursor to default to indicate it's not clickable */
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            white-space: nowrap;
+        }
+
+        /* New class for negative scores */
+        .player-score.negative-score {
+            color: #F44336; /* red */
+        }
+        
+        .player-score.three-digit {
+            font-size: 15vmin;
+        }
+
+        /* Control container (bottom right) */
+        .control-container {
+            grid-area: 2 / 2 / 3 / 3;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 2px solid #555;
+            border-radius: 10px;
+            box-sizing: border-box;
+            display: flex;
+            flex-wrap: wrap; 
+        }
+
+        .score-buttons-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+        
+        .score-buttons-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .score-buttons-row > * {
+            margin: 0 0.7vmin;
+            min-width: 7.35vmin;
+            min-height: 7.35vmin;
+        }
+        
+        /* Updated Snooker Ball Styling for a more realistic look */
+        .snooker-ball {
+            width: 10vmin;
+            height: 10vmin;
+            border-radius: 50%;
+            border: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 4.5vmin;
+            font-weight: bold;
+            cursor: pointer;
+            aspect-ratio: 1 / 1;
+            position: relative;
+            transform: translateY(0);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+            
+            /* Realistic 3D and floating effects */
+            box-shadow: 
+                0 0 15px rgba(255, 255, 255, 0.3), /* เรืองแสงรอบนอก */
+                inset 0 0 20px rgba(0, 0, 0, 0.4), /* เงาด้านในเพื่อเพิ่มความลึก */
+                0 15px 30px rgba(0, 0, 0, 0.6); /* เงาลอย */
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .snooker-ball:active {
+            transform: translateY(2px);
+            box-shadow: 0 0 5px rgba(255, 255, 255, 0.1),
+                inset 0 0 5px rgba(0, 0, 0, 0.2),
+                0 5px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Solid colors for snooker balls with radial gradients for shine */
+        .snooker-ball.red { 
+            background: 
+                radial-gradient(circle at 15% 15%, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 20%),
+                radial-gradient(circle at 30% 30%, #FF6B6B 0%, #E53935 80%);
+            color: white;
+        }
+        .snooker-ball.yellow { 
+            background: 
+                radial-gradient(circle at 15% 15%, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 20%),
+                radial-gradient(circle at 30% 30%, #FFFF99 0%, #FDD835 80%);
+            color: black;
+        }
+        .snooker-ball.green { 
+            background: 
+                radial-gradient(circle at 15% 15%, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 20%),
+                radial-gradient(circle at 30% 30%, #90EE90 0%, #388E3C 80%);
+        }
+        .snooker-ball.brown { 
+            background: 
+                radial-gradient(circle at 15% 15%, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 20%),
+                radial-gradient(circle at 30% 30%, #D2B48C 0%, #795548 80%);
+        }
+        .snooker-ball.blue { 
+            background: 
+                radial-gradient(circle at 15% 15%, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 20%),
+                radial-gradient(circle at 30% 30%, #64B5F6 0%, #1976D2 80%);
+        }
+        .snooker-ball.pink { 
+            background: 
+                radial-gradient(circle at 15% 15%, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 20%),
+                radial-gradient(circle at 30% 30%, #FF69B4 0%, #C71585 80%);
+            color: black; 
+        }
+        .snooker-ball.black { 
+            background: 
+                radial-gradient(circle at 15% 15%, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 20%),
+                radial-gradient(circle at 30% 30%, #5C5C5C 0%, #212121 80%);
+        }
+        .snooker-ball.gold-ball { 
+            background: 
+                radial-gradient(circle at 15% 15%, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 20%),
+                radial-gradient(circle at 30% 30%, #FFD700 0%, #FFA500 80%);
+            color: black; 
+        }
+        
+        .special-score-button {
+            width: 9vmin;
+            height: 9vmin;
+            border-radius: 50%;
+            border: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #FF0000; /* สีดาวแดง */
+            font-size: 4.05vmin;
+            font-weight: bold;
+            cursor: pointer;
+            aspect-ratio: 1 / 1;
+            position: relative;
+            transform: translateY(0);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+            
+            /* Realistic 3D and floating effects for red star button */
+            background: 
+                radial-gradient(circle at 15% 15%, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 20%),
+                linear-gradient(135deg, #4CAF50, #2E8B57); /* สีพื้นหลังเขียวไล่ระดับ */
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.3),
+                inset 0 0 20px rgba(0, 0, 0, 0.4),
+                0 15px 30px rgba(0, 0, 0, 0.6);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+            margin-right: 2.5vw;
+        }
+
+        .action-buttons-container {
+            display: flex;
+            justify-content: flex-start; /* จัดให้ชิดซ้าย */
+            align-items: center; /* จัดให้อยู่กึ่งกลางในแนวตั้ง */
+            width: 100%;
+            margin-top: 15px;
+            /* ลบ gap เพื่อควบคุมระยะห่างด้วย margin แทน */
+        }
+        
+        .sign-button-container {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .special-score-button {
+            margin-left: 20px; /* เว้นระยะห่างด้านซ้ายเพิ่มขึ้น */
+        }
+
+        .action-button {
+            color: #FFFFFF;
+            font-family: 'Share+Tech+Mono', monospace;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            width: 25%;
+            height: 6vh;
+            border-radius: 1vw;
+            font-size: 2.5vmin;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.3);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+            position: relative;
+            transform: translateY(0);
+            margin-right: 1.5vw; /* กำหนดระยะห่างเริ่มต้นสำหรับปุ่มทั้งหมด */
+        }
+        
+        .action-button:hover {
+            opacity: 1;
+            transform: translateY(-2px);
+            box-shadow: 0 7px 14px rgba(0,0,0,0.3), 0 3px 6px rgba(0,0,0,0.2);
+        }
+        
+        .action-button:active {
+            transform: translateY(1px);
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        .finish-button { background-color: #4CAF50; }
+        .set-zero-button { background-color: #FF9800; }
+        .undo-button { background-color: #F44336; }
+        .home-button.home-text { color: white; }
+
+        .sign-button {
+            background-color: #0000FF; /* Blue color for inactive */
+            color: white;
+            border-radius: 8px;
+            width: 36%;
+            font-size: 4vmin;
+            height: 8vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 4px 8px rgba(0, 0, 0, 0.5);
+            transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+            font-weight: bold;
+        }
+
+        .sign-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+        }
+
+        .sign-button.active {
+            background-color: #DC143C; /* Crimson/Dark Red for active/foul */
+            box-shadow: 0 0 15px rgba(220, 20, 60, 0.8);
+            transform: translateY(0);
+        }
+
+        /* Home button style */
+        .home-button {
+            background-color: #FFD700;
+            color: black;
+            width: 6vh;
+            height: 6vh;
+            border-radius: 50%;
+            font-size: 2.5vmin;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0;
+            margin: 0 0.5vw;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.3);
+        }
+
+        /* ปรับ margin-right ของปุ่ม Home ให้ลดลง 50% เพื่อให้ใกล้ปุ่ม CG */
+        #home-button {
+            margin-right: 0.75vw;
+        }
+        
+        /* กำหนดให้ปุ่ม CG ไม่มี margin ด้านขวา เพื่อเป็นจุดหลัก */
+        #cg-button {
+            margin-right: 0;
+        }
+
+        .home-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 7px 14px rgba(0,0,0,0.3), 0 3px 6px rgba(0,0,0,0.2);
+        }
+
+        .home-button:active {
+            transform: translateY(1px);
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .message-box {
+            position: absolute;
+            bottom: 5%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 1vmin 2vmin;
+            border-radius: 1vw;
+            font-size: 2.5vmin;
+            text-align: center;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            z-index: 100;
+        }
+        
+        .message-box.show {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        /* Numeric keypad */
+        .keypad-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            display: none;
+        }
+        
+        .keypad-container {
+            background-color: #222;
+            padding: 20px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            max-width: 90%;
+            width: 400px;
+        }
+        
+        .keypad-input {
+            width: 100%;
+            background-color: #444;
+            color: white;
+            border: none;
+            text-align: right;
+            font-size: 4vmin;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+
+        .keypad-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            width: 100%;
+        }
+        
+        .keypad-button {
+            width: 100%;
+            padding: 2vmin;
+            font-size: 5vmin;
+            font-family: 'Share Tech Mono', monospace;
+            background-color: #555;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.1s ease;
+        }
+        
+        .keypad-button:active {
+            background-color: #777;
+        }
+
+        .keypad-buttons-row-special {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .keypad-button.special {
+            width: 100%;
+            padding: 2vmin;
+            font-size: 4vmin;
+            font-weight: bold;
+            font-family: 'Share Tech Mono', monospace;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        
+        .keypad-button.done { background-color: #4CAF50; color: white; }
+        .keypad-button.backspace { background-color: #F44336; color: white; }
+        .keypad-button.cancel { background-color: #FF9800; color: white; }
+        
+        /* Name input modal */
+        .name-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            display: none;
+        }
+        
+        .name-container {
+            background-color: #222;
+            padding: 20px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            max-width: 90%;
+            width: 400px;
+        }
+
+        .name-input {
+            width: 100%;
+            background-color: #444;
+            color: white;
+            border: none;
+            font-size: 4vmin;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        
+        .name-buttons {
+            display: flex;
+            gap: 10px;
+            width: 50%;
+            justify-content: center;
+        }
+
+        .name-buttons > button {
+            width: 50%;
+            padding: 2vmin;
+            font-size: 4vmin;
+            font-weight: bold;
+            font-family: 'Share Tech Mono', monospace;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="player-container player-a" data-player-id="player-a">
+        <div class="special-score" id="special-score-a">0</div>
+        <div class="player-name-wrapper">
+            <div class="player-name editable-name" id="player-a-name" data-player-id="player-a">PLAYER A</div>
+        </div>
+        <div class="player-frame-score editable-score" id="player-a-frames">0</div>
+        <div class="player-score-wrapper">
+            <div class="player-score" id="player-a-score">0</div>
+        </div>
+    </div>
+
+    <div class="player-container player-b" data-player-id="player-b">
+        <div class="special-score" id="special-score-b">0</div>
+        <div class="player-name-wrapper">
+            <div class="player-name editable-name" id="player-b-name" data-player-id="player-b">PLAYER B</div>
+        </div>
+        <div class="player-frame-score editable-score" id="player-b-frames">0</div>
+        <div class="player-score-wrapper">
+            <div class="player-score" id="player-b-score">0</div>
+        </div>
+    </div>
+
+    <div class="player-container player-c" data-player-id="player-c">
+        <div class="special-score" id="special-score-c">0</div>
+        <div class="player-name-wrapper">
+            <div class="player-name editable-name" id="player-c-name" data-player-id="player-c">PLAYER C</div>
+        </div>
+        <div class="player-frame-score editable-score" id="player-c-frames">0</div>
+        <div class="player-score-wrapper">
+            <div class="player-score" id="player-c-score">0</div>
+        </div>
+    </div>
+
+    <div class="control-container">
+        <div class="score-buttons-container">
+            <div class="score-buttons-row">
+                <div class="snooker-ball red" data-score="1">1</div>
+                <div class="snooker-ball yellow" data-score="2">2</div>
+                <div class="snooker-ball green" data-score="3">3</div>
+                <div class="snooker-ball brown" data-score="4">4</div>
+            </div>
+            <div class="score-buttons-row">
+                <div class="snooker-ball blue" data-score="5">5</div>
+                <div class="snooker-ball pink" data-score="6">6</div>
+                <div class="snooker-ball black" data-score="7">7</div>
+                <div class="snooker-ball gold-ball" data-score="10">10</div>
+            </div>
+        </div>
+        <div class="sign-button-container">
+            <button class="sign-button" id="minus-button" data-sign="-1">-</button>
+            <button class="special-score-button" id="special-score-button">★</button>
+        </div>
+        <div class="action-buttons-container">
+            <button class="action-button finish-button">Finish</button>
+            <button class="action-button set-zero-button">Set Zero</button>
+            <button class="action-button undo-button">Undo</button>
+            <button class="action-button home-button" id="home-button">🏡</button>
+            <button class="action-button home-button" id="cg-button">CG</button>
+        </div>
+    </div>
+
+    <div id="message-box" class="message-box"></div>
+    
+    <div id="keypad-modal" class="keypad-modal">
+        <div class="keypad-container">
+            <input type="text" id="keypad-input" class="keypad-input" readonly>
+            <div class="keypad-buttons">
+                <button class="keypad-button" data-key="1">1</button>
+                <button class="keypad-button" data-key="2">2</button>
+                <button class="keypad-button" data-key="3">3</button>
+                <button class="keypad-button" data-key="4">4</button>
+                <button class="keypad-button" data-key="5">5</button>
+                <button class="keypad-button" data-key="6">6</button>
+                <button class="keypad-button" data-key="7">7</button>
+                <button class="keypad-button" data-key="8">8</button>
+                <button class="keypad-button" data-key="9">9</button>
+                <button class="keypad-button" data-key="0">0</button>
+            </div>
+            <div class="keypad-buttons-row-special">
+                <button class="keypad-button special backspace" data-key="backspace">Backspace</button>
+                <button class="keypad-button special done" data-key="done">Done</button>
+                <button class="keypad-button special cancel" data-key="cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="name-modal" class="name-modal">
+        <div class="name-container">
+            <input type="text" id="name-input" class="name-input" maxlength="10" placeholder="Enter Player Name">
+            <div class="name-buttons">
+                <button class="keypad-button special done" data-key="done">Done</button>
+                <button class="keypad-button special cancel" data-key="cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State variables for the scoreboard
+        let activePlayerId = null;
+        let scoreHistory = [];
+        let scoreSign = 1;
+        let targetElement = null;
+
+        // Background image settings
+        let backgroundImages = [
+            'Background/CothSS.jpg',
+            'Background/image1.jpg',
+            'Background/image2.jpg',
+            'Background/image3.jpg',
+            'Background/image4.jpg'
+        ];
+        let currentImageIndex = 0;
+        const body = document.body;
+        const cgButton = document.getElementById('cg-button');
+        
+        // Store special scores
+        const specialScores = {
+            'player-a': 0,
+            'player-b': 0,
+            'player-c': 0
+        };
+
+        // Define speech synthesis object
+        const synth = window.speechSynthesis;
+        let speechQueue = [];
+        let isSpeaking = false;
+        let isTtsActivated = false;
+        
+        // This function now robustly processes the speech queue
+        function processSpeechQueue() {
+            if (speechQueue.length === 0) {
+                isSpeaking = false;
+                return;
+            }
+            
+            isSpeaking = true;
+            const textToSpeak = speechQueue.shift();
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            utterance.lang = 'en-US';
+            
+            utterance.onend = () => {
+                processSpeechQueue();
+            };
+            
+            utterance.onerror = (event) => {
+                // This is the correct place to handle the error.
+                console.error(`SpeechSynthesisUtterance.onerror: ${event.error}`);
+                if (event.error === 'not-allowed') {
+                    // We can't do anything about this until the user interacts.
+                    // The rest of the app will still work, just no voice.
+                }
+                processSpeechQueue();
+            };
+            
+            synth.speak(utterance);
+        }
+        
+        // This function adds text to the speech queue
+        function speak(text) {
+            if (!isTtsActivated) {
+                // Do not speak if TTS is not yet activated by a user click
+                return;
+            }
+
+            // Check if TTS is supported
+            if (!synth) {
+                console.error("Text-to-speech not supported in this browser.");
+                return;
+            }
+            
+            speechQueue.push(text);
+            if (!isSpeaking) {
+                processSpeechQueue();
+            }
+        }
+        
+        // Create a simple audio context for sound effects
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playStartupSound() {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            // Subtle, soft sound
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(220, audioContext.currentTime); // A3, a lower frequency
+            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime); // A very low gain
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.start();
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.3);
+            oscillator.stop(audioContext.currentTime + 0.3);
+        }
+        
+        function playUndoSound() {
+            // Create an oscillator node
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            // Set the sound properties (simple digital beep)
+            oscillator.type = 'square';
+            oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // A4
+            gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+
+            // Connect everything
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            // Start and stop the sound
+            oscillator.start();
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+
+        // Function to prevent double-tap zoom on mobile devices
+        function preventZoom() {
+            let lastTouchEnd = 0;
+            document.addEventListener('touchend', function (event) {
+                const now = (new Date()).getTime();
+                if (now - lastTouchEnd <= 300) {
+                    event.preventDefault();
+                }
+                lastTouchEnd = now;
+            }, false);
+
+            document.addEventListener('touchmove', function (event) {
+                if (event.touches.length > 1) {
+                    event.preventDefault();
+                }
+            }, { passive: false });
+
+            document.addEventListener('dblclick', function (event) {
+                event.preventDefault();
+            }, false);
+        }
+
+        function resetScoreSign() {
+            const minusButton = document.getElementById('minus-button');
+            minusButton.textContent = '-';
+            minusButton.classList.remove('active');
+            scoreSign = 1;
+        }
+
+        window.onload = () => {
+            preventZoom();
+            resetScoreSign();
+            setupEditableFields();
+            setupKeypad();
+            setupNameModal();
+            
+            // Set initial display scores to zero
+            updateScoreDisplay(document.getElementById('player-a-score'), 0);
+            updateScoreDisplay(document.getElementById('player-b-score'), 0);
+            updateScoreDisplay(document.getElementById('player-c-score'), 0);
+            
+            // Automatically select Player A and activate TTS on load
+            setActivePlayer('player-a');
+            isTtsActivated = true;
+        };
+
+        function updateScoreDisplay(scoreElement, newScore) {
+            scoreElement.textContent = newScore;
+            
+            if (newScore < 0) {
+                scoreElement.classList.add('negative-score');
+            } else {
+                scoreElement.classList.remove('negative-score');
+            }
+
+            if (String(newScore).length >= 3) {
+                scoreElement.classList.add('three-digit');
+            } else {
+                scoreElement.classList.remove('three-digit');
+            }
+        }
+        
+        // This function now handles adding points to the main score
+        function handleScoreClick(score) {
+            // บันทึกสถานะก่อนการเปลี่ยนแปลง
+            saveState();
+
+            const scoreDisplay = document.getElementById(activePlayerId + '-score');
+            const playerName = document.getElementById(activePlayerId + '-name').textContent;
+            
+            const currentScore = parseInt(scoreDisplay.textContent);
+            const scoreToAdd = parseInt(score) * scoreSign;
+            const newScore = currentScore + scoreToAdd;
+            
+            // Update the score display immediately
+            updateScoreDisplay(scoreDisplay, newScore);
+            
+            // Speak the point value and the player's new total score
+            if (scoreSign === 1) {
+                speak(`${score} point.`);
+                setTimeout(() => {
+                    speak(`${newScore}`);
+                }, 1000);
+            } else {
+                speak(`Foul. ${score} point.`);
+                setTimeout(() => {
+                    speak(`${newScore}`);
+                }, 1000);
+            }
+        }
+        
+        // Function to save the current game state
+        function saveState() {
+            const snapshot = {};
+            document.querySelectorAll('.player-container').forEach(container => {
+                const id = container.getAttribute('data-player-id');
+                snapshot[id] = {
+                    score: parseInt(document.getElementById(id + '-score').textContent),
+                    frames: parseInt(document.getElementById(id + '-frames').textContent)
+                };
+            });
+            scoreHistory.push(snapshot);
+        }
+
+        // When clicking player-container, set active player and speak name
+        document.querySelectorAll('.player-container').forEach(container => {
+            container.addEventListener('click', (e) => {
+                // If the click is on an editable name or score, let that handler take over
+                if (e.target.closest('.editable-score') || e.target.closest('.editable-name')) {
+                    return;
+                }
+                const playerId = container.getAttribute('data-player-id');
+                setActivePlayer(playerId);
+            });
+        });
+
+        function setActivePlayer(playerId) {
+            // Check if the active player is already the one being clicked
+            if (activePlayerId === playerId) {
+                return;
+            }
+            
+            // Remove active class from all player containers
+            document.querySelectorAll('.player-container').forEach(container => {
+                container.classList.remove('active');
+            });
+            
+            // Add active class to the selected player container
+            const activeContainer = document.querySelector(`.player-container[data-player-id="${playerId}"]`);
+            if (activeContainer) {
+                activeContainer.classList.add('active');
+            }
+            activePlayerId = playerId;
+            
+            // Speak the player's name after a short delay
+            const playerName = document.getElementById(playerId + '-name').textContent;
+            speak(playerName);
+            
+            // Reset the score sign when a new player is selected
+            resetScoreSign();
+        }
+        
+        function showMessage(text, duration = 3000) {
+            const messageBox = document.getElementById('message-box');
+            messageBox.textContent = text;
+            messageBox.classList.add('show');
+            setTimeout(() => {
+                messageBox.classList.remove('show');
+            }, duration);
+        }
+        
+        // Add event listeners to score balls
+        document.querySelectorAll('.snooker-ball').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const score = e.target.getAttribute('data-score');
+                if (score) {
+                    handleScoreClick(score);
+                }
+            });
+        });
+
+        // เมื่อกดปุ่มดาว ให้ +1 หรือ -1 ที่ special score ของผู้เล่นที่ active
+        document.getElementById('special-score-button').addEventListener('click', () => {
+            if (activePlayerId) {
+                const specialScoreId = `special-score-${activePlayerId.split('-')[1]}`;
+                const scoreEl = document.getElementById(specialScoreId);
+
+                if (scoreEl) {
+                    let current = parseInt(scoreEl.textContent) || 0;
+                    if (scoreSign === -1) {
+                        // ลดคะแนนพิเศษทีละ 1 เมื่ออยู่ในโหมดลบและคะแนนมากกว่า 0
+                        if (current > 0) {
+                            current -= 1;
+                        }
+                    } else {
+                        // เพิ่มคะแนนปกติ
+                        current += 1;
+                    }
+                    scoreEl.textContent = current;
+                }
+            }
+        });
+
+        // Minus button handler
+        document.getElementById('minus-button').addEventListener('click', (e) => {
+            scoreSign *= -1;
+            const button = e.target;
+            if (scoreSign === -1) {
+                button.classList.add('active');
+            } else {
+                button.classList.remove('active');
+            }
+            
+            speak(scoreSign === -1 ? "Foul" : "Normal mode");
+        });
+        
+        // Action buttons
+        document.querySelector('.finish-button').addEventListener('click', () => {
+            // บันทึกสถานะก่อนการเปลี่ยนแปลง
+            saveState();
+
+            const framesDisplay = document.getElementById(activePlayerId + '-frames');
+            const currentFrames = parseInt(framesDisplay.textContent);
+
+            // Update frame score of the winning player
+            const newFrames = currentFrames + 1;
+            framesDisplay.textContent = newFrames;
+
+            // Reset scores of all players to 0
+            document.querySelectorAll('.player-score').forEach(scoreElement => {
+                updateScoreDisplay(scoreElement, 0);
+            });
+            
+            // Speak the update
+            const playerName = document.getElementById(activePlayerId + '-name').textContent;
+            speak(`${playerName} wins a frame.`);
+            
+            resetScoreSign();
+        });
+
+        document.querySelector('.set-zero-button').addEventListener('click', () => {
+            // บันทึกสถานะก่อนการเปลี่ยนแปลง
+            saveState();
+            
+            // Reset scores of all players to 0 without any voice or message
+            document.querySelectorAll('.player-score').forEach(scoreElement => {
+                updateScoreDisplay(scoreElement, 0);
+            });
+            
+            resetScoreSign();
+            
+            speak("Score set to zero.");
+        });
+
+        document.querySelector('.undo-button').addEventListener('click', () => {
+            if (scoreHistory.length > 0) {
+                const lastState = scoreHistory.pop();
+                
+                // Restore state from snapshot
+                for (const playerId in lastState) {
+                    const playerState = lastState[playerId];
+                    updateScoreDisplay(document.getElementById(playerId + '-score'), playerState.score);
+                    document.getElementById(playerId + '-frames').textContent = playerState.frames;
+                }
+                
+                // Play sound
+                playUndoSound();
+                speak("Undo.");
+                
+            } else {
+                // Keep the original behavior for when there's nothing to undo
+                showMessage('ไม่มีการกระทำที่สามารถยกเลิกได้.', 2000);
+            }
+            resetScoreSign();
+        });
+
+        // Function to setup all editable fields
+        function setupEditableFields() {
+            // Editable scores (frames)
+            document.querySelectorAll('.editable-score').forEach(element => {
+                element.addEventListener('click', () => {
+                    targetElement = element;
+                    showKeypad();
+                });
+            });
+
+            // Editable names
+            document.querySelectorAll('.editable-name').forEach(element => {
+                element.addEventListener('click', () => {
+                    targetElement = element;
+                    showNameModal();
+                });
+            });
+        }
+        
+        // Keypad modal functions
+        function showKeypad() {
+            const keypadModal = document.getElementById('keypad-modal');
+            const keypadInput = document.getElementById('keypad-input');
+            keypadModal.style.display = 'flex';
+            keypadInput.value = targetElement.textContent;
+            keypadInput.focus();
+        }
+        
+        function hideKeypad() {
+            document.getElementById('keypad-modal').style.display = 'none';
+            targetElement = null;
+        }
+
+        function setupKeypad() {
+            document.querySelectorAll('#keypad-modal .keypad-button').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const key = e.target.getAttribute('data-key');
+                    const input = document.getElementById('keypad-input');
+
+                    if (key === 'backspace') {
+                        input.value = input.value.slice(0, -1);
+                    } else if (key === 'done') {
+                        // บันทึกสถานะก่อนการเปลี่ยนแปลง
+                        saveState();
+
+                        let newValue = parseInt(input.value) || 0;
+                        
+                        if (targetElement.classList.contains('editable-score')) {
+                            targetElement.textContent = newValue;
+                        } else if (targetElement.classList.contains('player-score')) {
+                            updateScoreDisplay(targetElement, newValue);
+                        }
+                        
+                        hideKeypad();
+                    } else if (key === 'cancel') {
+                        hideKeypad();
+                    } else {
+                        input.value += key;
+                    }
+                });
+            });
+        }
+        
+        // Name modal functions
+        function showNameModal() {
+            const nameModal = document.getElementById('name-modal');
+            const nameInput = document.getElementById('name-input');
+            nameModal.style.display = 'flex';
+            nameInput.value = targetElement.textContent;
+            nameInput.focus();
+        }
+        
+        function hideNameModal() {
+            document.getElementById('name-modal').style.display = 'none';
+            targetElement = null;
+        }
+
+        function setupNameModal() {
+            document.querySelectorAll('#name-modal .keypad-button').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const key = e.target.getAttribute('data-key');
+                    const input = document.getElementById('name-input');
+                    if (key === 'done') {
+                        if (targetElement) {
+                            const newName = input.value.toUpperCase();
+                            targetElement.textContent = newName;
+                            // If the player name is changed, update the active player's name in speech
+                            if (targetElement.getAttribute('data-player-id') === activePlayerId) {
+                                speak(newName);
+                            }
+                        }
+                        hideNameModal();
+                    } else if (key === 'cancel') {
+                        hideNameModal();
+                    }
+                });
+            });
+        }
+
+        function changeBackground() {
+            // Check if we have reached the end of the image list
+            if (currentImageIndex >= backgroundImages.length) {
+                body.style.backgroundImage = 'none';
+                body.style.backgroundColor = '#006400';
+                body.classList.remove('darken-background');
+                currentImageIndex = 0; // Reset index to loop again
+                return;
+            }
+
+            const imageUrl = backgroundImages[currentImageIndex];
+            const img = new Image();
+
+            img.onload = () => {
+                body.style.backgroundImage = `url(${imageUrl})`;
+                const needsDarkening = imageUrl.includes('image');
+                
+                if (needsDarkening) {
+                    body.classList.add('darken-background');
+                } else {
+                    body.classList.remove('darken-background');
+                }
+                
+                currentImageIndex++;
+            };
+            
+            img.onerror = () => {
+                console.error(`Failed to load image: ${imageUrl}`);
+                showMessage("ไม่สามารถโหลดรูปภาพได้ กำลังลองรูปถัดไป...", 3000);
+                
+                currentImageIndex++;
+                changeBackground();
+            };
+            
+            img.src = imageUrl;
+        }
+
+        cgButton.addEventListener('click', () => {
+            changeBackground();
+        });
+    </script>
+</body>
+</html>

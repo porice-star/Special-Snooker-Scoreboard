@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Snooker Scoreboard</title>
+    <style>
+        /* Font from Google Fonts */
+        @font-face {
+            font-family: 'Bebas Neue';
+            src: url('https://fonts.gstatic.com/s/bebasneue/v14/JTUSjIg1_vgSHg.woff2') format('woff2');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        /* Basic Body and HTML styling */
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        body {
+            background-color: #006400; /* Dark green for snooker table feel */
+            color: white;
+            font-family: 'Bebas Neue', sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center; 
+            padding: 4% 5%;
+            box-sizing: border-box;
+            position: relative;
+            touch-action: manipulation;
+            transition: background-color 0.5s ease;
+        }
+        
+        /* New CSS class for the background image mode */
+        body.background-image-mode {
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-color: transparent;
+        }
+        
+        /* New CSS pseudo-element to darken the background image without affecting UI */
+        body.darken-background::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: -1;
+            transition: background-color 0.5s ease;
+        }
+        
+        /* Old position for CG button - Removed */
+        .top-left-buttons {
+            display: none;
+        }
+
+        /* New styling for the CG and Home button within the action row */
+        .cg-button, .home-button {
+            width: 8vmin;
+            height: 8vmin;
+            border-radius: 50%;
+            color: black;
+            font-size: 3vmin;
+            font-weight: bold;
+            border: none;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-decoration: none;
+            
+            /* Add radial gradient and shadows for a 3D sphere effect */
+            background-image: 
+                radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.4) 10%, transparent 20%), 
+                radial-gradient(circle at 65% 65%, transparent 20%, rgba(0, 0, 0, 0.4) 90%);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.6); 
+            text-shadow: 1px 1px rgba(0, 0, 0, 0.5);
+            position: relative;
+            margin: 0 1vmin;
+            flex-shrink: 0;
+        }
+
+        .cg-button svg, .home-button svg {
+            filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.5));
+        }
+
+        .home-button {
+            background-color: #A9A9A9; /* สีเทาเงินสำหรับปุ่ม Home */
+        }
+        
+        .cg-button {
+            background-color: #FFD700; /* สีทองสำหรับปุ่ม CG */
+        }
+        
+        .cg-button:active, .home-button:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .cg-button:focus, .home-button:focus {
+            outline: none;
+        }
+        
+        /* Container for all top-level content (player names, scores, and center elements) */
+        .top-content-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            width: 100%;
+            /* ปรับแก้: ลด margin-top ให้ส่วนกลางอยู่สูงขึ้น */
+            margin-top: 0;
+        }
+        
+        /* Container for each player's side */
+        .player-side-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            width: 31.5%; /* Reduced by 10% from 35% */
+            text-align: center;
+            padding: 0;
+            transition: all 0.3s ease-in-out;
+            position: relative;
+            border: 2px solid transparent;
+            border-radius: 10px;
+            background-color: rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            /* เพิ่ม padding-top เพื่อผลักชื่อผู้เล่นลง */
+            padding-top: 6vh;
+        }
+
+        /* Active player border and shadow */
+        .player-side-container.active {
+            border-color: #FFD700;
+            box-shadow: 0 0 15px #FFD700;
+        }
+        
+        .player-side-container > :first-child {
+            margin-top: 0;
+        }
+        
+        .player-side-container > * {
+            margin-bottom: 2vh;
+        }
+
+        .player-side-container > :last-child {
+            margin-bottom: 0;
+        }
+        
+        .player-name {
+            font-size: 4.752vmin; /* Reduced by 10% from 5.28vmin */
+            font-weight: bold;
+            color: #FFFFFF;
+            width: 100%;
+            border: none;
+            background: none;
+            outline: none;
+            padding: 0;
+            text-shadow: 
+                -2px -2px 0 #000, 
+                2px -2px 0 #000, 
+                -2px 2px 0 #000, 
+                2px 2px 0 #000,
+                0 0 10px #fff; 
+            cursor: pointer;
+            position: relative;
+            z-index: 10;
+            text-align: center; 
+            transition: transform 0.2s ease;
+        }
+        
+        .player-name.editing {
+            color: #FF0000;
+        }
+
+        /* Container to fix the score display area height */
+        .player-score-container {
+            display: flex;
+            align-items: center; 
+            justify-content: center; 
+            width: 100%;
+            /* --- แก้ไขตรงนี้เพื่อลดความสูงลง 10% --- */
+            height: 50vh; 
+        }
+        
+        .player-score {
+            font-size: 51.0705vmin; /* Reduced by 10% from 56.745vmin */
+            font-weight: normal;
+            color: #FFFFFF;
+            line-height: 0.8;
+            transition: font-size 0.2s ease;
+            text-shadow:
+                0 0 10px rgba(255, 255, 255, 0.9),
+                0 10px 15px rgba(0, 0, 0, 0.8),
+                0 20px 25px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* New CSS class to adjust font size for three-digit scores */
+        .player-score.three-digit {
+            font-size: 36.45vmin; /* Reduced by 10% from 40.5vmin */
+        }
+        
+        /* New container for the Control buttons at the bottom */
+        .control-container {
+            position: absolute;
+            bottom: 2vh;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 90%;
+            gap: 2vh;
+        }
+
+        /* Container for the score buttons */
+        .score-buttons-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            /* ปรับระยะห่างลดลง 1% */
+            gap: 2.53vmin;
+            width: 100%;
+            /* ปรับ margin-bottom เพื่อเพิ่มระยะห่างระหว่างแถวปุ่มกดคะแนนกับแถวปุ่มควบคุม */
+            margin-bottom: 1vh;
+        }
+
+        /* Container for the action buttons */
+        .action-buttons-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 2vmin;
+            width: 100%;
+        }
+
+        /* Corrected styling for the snooker balls with a more realistic 3D effect */
+        .snooker-ball {
+            width: 11.18vmin; 
+            height: 11.18vmin; 
+            border-radius: 50%;
+            border: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 4vmin;
+            font-weight: bold;
+            cursor: pointer;
+            aspect-ratio: 1 / 1;
+            background-color: transparent;
+            background-image: 
+                radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.4) 10%, transparent 20%), 
+                radial-gradient(circle at 65% 65%, transparent 20%, rgba(0, 0, 0, 0.4) 90%);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.6); 
+            text-shadow: 1px 1px rgba(0, 0, 0, 0.5);
+            position: relative;
+            transform: translateY(0);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .snooker-ball:active {
+            transform: translateY(2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        }
+        
+        .action-button {
+            color: #FFFFFF;
+            font-family: 'Bebas Neue', sans-serif;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            width: 25vw;
+            height: 9vh;
+            border-radius: 1vw;
+            font-size: 2.5vmin; 
+            box-shadow: 0.2vw 0.2vw 0.3vw rgba(0, 0, 0, 0.5);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.3);
+            position: relative;
+            transform: translateY(0);
+        }
+
+        .action-button:hover {
+            opacity: 1;
+            transform: translateY(-2px);
+            box-shadow: 0 7px 14px rgba(0,0,0,0.3), 0 3px 6px rgba(0,0,0,0.2);
+        }
+        
+        .action-button:active {
+            transform: translateY(1px);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        .finish-button {
+            background-color: #4CAF50;
+        }
+        
+        .set-zero-button {
+            background-color: #FF9800;
+        }
+        
+        .undo-button {
+            background-color: #F44336;
+        }
+        
+        /* Updated ball colors to support the radial-gradient effect */
+        .red { background-color: #FF0000; }
+        .yellow { background-color: #FFFF00; color: black; }
+        .green { background-color: #008000; }
+        .brown { background-color: #5C4033; }
+        .blue { background-color: #0000FF; }
+        .pink { background-color: #FFC0CB; color: black; }
+        .black { background-color: #000000; }
+        
+        .black-red-ball { 
+            background-image: 
+                radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.4) 10%, transparent 20%), 
+                radial-gradient(circle at 65% 65%, transparent 20%, rgba(0, 0, 0, 0.4) 90%),
+                linear-gradient(to top right, black 50%, red 50%);
+        }
+        
+        .gold-ball { 
+            background-image: 
+                radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.4) 10%, transparent 20%), 
+                radial-gradient(circle at 65% 65%, transparent 20%, rgba(0, 0, 0, 0.4) 90%),
+                radial-gradient(circle, #FFD700 0%, #C0A000 100%);
+            color: black;
+        }
+        
+        .white-ball { background-color: #FFFFFF; color: black; }
+
+        .message-box {
+            position: absolute;
+            bottom: 5%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 1vmin 2vmin;
+            border-radius: 1vw;
+            font-size: 2.5vmin;
+            text-align: center;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            z-index: 100;
+        }
+        
+        .message-box.show {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* NEW: Container for the center column with FRAME, DIFF, and KAR score */
+        .center-column-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            text-align: center;
+            width: 30%;
+            /* Minimal gap between each section */
+            gap: 1vh; 
+            /* ปรับแก้: เลื่อนตำแหน่งของส่วนกลางขึ้นด้านบนเพื่อให้อยู่สูงกว่ากรอบผู้เล่น */
+            transform: translateY(-5vh);
+        }
+
+        /* Group for Frame Score */
+        .frame-score-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            z-index: 10;
+        }
+
+        .frame-header {
+            font-size: 5.2272vmin; /* Increased by 10% from 4.752vmin */
+            font-weight: bold;
+            text-shadow: 
+                -2px -2px 0 #000, 
+                2px -2px 0 #000, 
+                -2px 2px 0 #000, 
+                2px 2px 0 #000,
+                0 0 10px #fff; 
+            margin-bottom: 1%;
+        }
+
+        .frame-score-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .frame-score-wrapper > * {
+            margin: 0 2vw; 
+        }
+
+        .frame-score {
+            font-size: 15vmin;
+            font-weight: bold;
+            color: #FFFF00;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5), 0 0 5px #FFFF00;
+            cursor: pointer;
+            transition: color 0.2s ease-in-out;
+        }
+        
+        .frame-score.editing {
+            color: #FF0000;
+        }
+
+        /* Group for Diff Score */
+        .diff-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .diff-label {
+            font-size: 4vmin;
+            font-weight: bold;
+            color: #FFFFFF;
+            text-shadow: 
+                -2px -2px 0 #000, 
+                2px -2px 0 #000, 
+                -2px 2px 0 #000, 
+                2px 2px 0 #000,
+                0 0 10px #fff;
+        }
+
+        .diff-score {
+            font-size: 15vmin;
+            font-weight: bold;
+            color: #FF0000;
+            text-shadow: 0 4px 6px rgba(0, 0, 0, 0.5), 0 0 5px #FF0000;
+            line-height: 1;
+        }
+        
+        /* NEW: Group for Kar Score */
+        .kar-score-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            z-index: 10;
+        }
+
+        /* UPDATED: Kar header to display the star icon */
+        .kar-header {
+            font-size: 4.84vmin;
+            color: #FF0000; /* Red color for the star */
+            text-shadow: 
+                -2px -2px 0 #000, 
+                2px -2px 0 #000, 
+                -2px 2px 0 #000, 
+                2px 2px 0 #000,
+                0 0 10px #fff; 
+            margin-bottom: 1%;
+        }
+        
+        .kar-star {
+            font-size: 4.84vmin;
+            color: #FF0000;
+            text-shadow: 
+                -2px -2px 0 #000, 
+                2px -2px 0 #000, 
+                -2px 2px 0 #000, 
+                2px 2px 0 #000,
+                0 0 10px #fff; 
+        }
+
+        .kar-score-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .kar-score-wrapper > * {
+            margin: 0 2vw; 
+        }
+
+        /* UPDATED: Kar score color to white */
+        .kar-score {
+            font-size: 15vmin;
+            font-weight: bold;
+            color: white; /* White color for Kar score */
+            text-shadow: 
+                /* Add a red border using multiple text-shadows */
+                -2px -2px 0 #FF0000, 
+                2px -2px 0 #FF0000, 
+                -2px 2px 0 #FF0000, 
+                2px 2px 0 #FF0000,
+                0 0 5px #FFFFFF;
+            cursor: pointer;
+            transition: color 0.2s ease-in-out;
+            touch-action: none; /* Prevent browser touch behavior */
+        }
+        
+        .kar-score.editing {
+            color: #FFD700; /* Highlight color when editing */
+        }
+        
+        /* NEW: Styling for the keypad overlay */
+        .kar-keypad-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: none; /* Hidden by default */
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            flex-direction: column;
+            gap: 2vh;
+        }
+        
+        .kar-keypad-display {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 10vmin;
+            color: white;
+            padding: 2vmin;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 1vmin;
+            width: 70vmin;
+            max-width: 500px;
+            text-align: right;
+            border: 2px solid white;
+        }
+
+
+        .kar-keypad-container {
+            background-color: #333;
+            padding: 2vmin;
+            border-radius: 2vmin;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr); /* 4 columns for +, - */
+            gap: 2vmin;
+            width: 70vmin;
+            max-width: 500px;
+        }
+
+        .kar-keypad-button {
+            background-color: #555;
+            color: white;
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 6vmin;
+            border: none;
+            border-radius: 1vmin;
+            padding: 3vmin 0;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .kar-keypad-button:active {
+            background-color: #777;
+            transform: translateY(1px);
+        }
+
+        .kar-keypad-button.delete {
+            background-color: #F44336;
+        }
+
+        .kar-keypad-button.done {
+            grid-column: span 2; /* Make OK button span 2 columns */
+            background-color: #4CAF50;
+        }
+        
+        .kar-keypad-button.plus {
+            background-color: #2196F3;
+        }
+        
+        .kar-keypad-button.minus {
+            background-color: #F44336;
+        }
+        
+        .kar-keypad-button.symbol {
+            font-size: 8vmin;
+        }
+
+
+    </style>
+</head>
+<body>
+    <!-- Old button container is now hidden -->
+    <div class="top-left-buttons"></div>
+
+    <!-- Container for all top-level content (player names, scores, and center elements) -->
+    <div class="top-content-container">
+        
+        <div class="player-side-container active" id="player1-container">
+            <input type="text" class="player-name" id="player1-name" maxlength="10" placeholder="Player 1" value="PLAYER 1">
+            <div class="player-score-container">
+                <div class="player-score" id="player1-score">0</div>
+            </div>
+        </div>
+
+        <!-- The center column now contains FRAME, DIFF, and KAR -->
+        <div class="center-column-wrapper">
+            <div class="frame-score-container">
+                <div class="frame-header">FRAME</div>
+                <div class="frame-score-wrapper">
+                    <div class="frame-score" id="player1-frames" contenteditable="true">0</div>
+                    <div class="frame-separator">:</div>
+                    <div class="frame-score" id="player2-frames" contenteditable="true">0</div>
+                </div>
+            </div>
+            
+            <div class="diff-container">
+                <div class="diff-label">DIFF</div>
+                <div class="diff-score" id="diff-score">0</div>
+            </div>
+
+            <!-- The Kar score container -->
+            <div class="kar-score-container">
+                <!-- UPDATED: Kar header to display the star icon -->
+                <div class="kar-header"><span class="kar-star">&#x2605;</span></div>
+                <div class="kar-score-wrapper">
+                    <!-- Updated the kar-score div to be non-editable, and to be clicked to show the keypad -->
+                    <div class="kar-score" id="player1-kar-score">0</div>
+                    <div class="kar-separator">:</div>
+                    <div class="kar-score" id="player2-kar-score">0</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="player-side-container" id="player2-container">
+            <input type="text" class="player-name" id="player2-name" maxlength="10" placeholder="Player 2" value="PLAYER 2">
+            <div class="player-score-container">
+                <div class="player-score" id="player2-score">0</div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="control-container">
+        <div class="score-buttons-row" id="score-buttons-row"></div>
+        <div class="action-buttons-row">
+            <button id="cg-button" class="cg-button">CG</button>
+            <button class="action-button finish-button">Finish</button>
+            <button class="action-button set-zero-button">Set Zero</button>
+            <button class="action-button undo-button">Undo</button>
+            <button id="home-button" class="home-button">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" width="100%" height="100%">
+                    <path d="M12 2L2 12h3v8h6v-6h2v6h6v-8h3L12 2zm0 2.21l6 6v7.79h-4v-6h-4v6h-4v-7.79l6-6z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+    
+    <div id="message-box" class="message-box"></div>
+
+    <!-- NEW: Kar Score Keypad Overlay -->
+    <div id="kar-keypad-overlay" class="kar-keypad-overlay">
+        <div id="kar-keypad-display" class="kar-keypad-display">0</div>
+        <div class="kar-keypad-container">
+            <button class="kar-keypad-button" data-value="1">1</button>
+            <button class="kar-keypad-button" data-value="2">2</button>
+            <button class="kar-keypad-button" data-value="3">3</button>
+            <button class="kar-keypad-button plus symbol" data-value="plus">+</button>
+            
+            <button class="kar-keypad-button" data-value="4">4</button>
+            <button class="kar-keypad-button" data-value="5">5</button>
+            <button class="kar-keypad-button" data-value="6">6</button>
+            <button class="kar-keypad-button minus symbol" data-value="minus">-</button>
+            
+            <button class="kar-keypad-button" data-value="7">7</button>
+            <button class="kar-keypad-button" data-value="8">8</button>
+            <button class="kar-keypad-button" data-value="9">9</button>
+            <button class="kar-keypad-button delete" data-value="delete">DEL</button>
+            
+            <button class="kar-keypad-button" data-value="0">0</button>
+            <button class="kar-keypad-button done" data-value="done">OK</button>
+        </div>
+    </div>
+
+
+    <script>
+        // Function to prevent double-tap zoom on mobile devices
+        function preventZoom() {
+            let lastTouchEnd = 0;
+            
+            document.addEventListener('touchend', function (event) {
+                const now = (new Date()).getTime();
+                if (now - lastTouchEnd <= 300) {
+                    event.preventDefault();
+                }
+                lastTouchEnd = now;
+            }, false);
+
+            document.addEventListener('touchmove', function (event) {
+                if (event.touches.length > 1) {
+                    event.preventDefault();
+                }
+            }, { passive: false });
+
+            document.addEventListener('dblclick', function (event) {
+                event.preventDefault();
+            }, false);
+        }
+
+        window.onload = function() {
+            preventZoom();
+            // เมื่อหน้าเว็บโหลดเสร็จ ให้เล่นเสียง "ฟิต" ก่อน จากนั้นค่อยเลือกผู้เล่น 1 อัตโนมัติและขานชื่อ
+            // Note: This might not work on some browsers due to autoplay policies.
+            playLeadInTone();
+            setTimeout(() => {
+                setActivePlayer('player1-container');
+                const player1Name = document.getElementById('player1-name').value;
+                speakPlayerName(player1Name);
+            }, 500); // ดีเลย์เล็กน้อยเพื่อให้เสียงนำเล่นก่อน
+        };
+
+        // Snooker ball scores data
+        const ballScores = [
+            { score: 1, color: 'red' },
+            { score: 2, color: 'yellow' },
+            { score: 3, color: 'green' },
+            { score: 4, color: 'brown' },
+            { score: 5, color: 'blue' },
+            { score: 6, color: 'pink' },
+            { score: 7, color: 'black' },
+            { score: 8, color: 'black-red-ball' },
+            { score: 10, color: 'gold-ball' }
+        ];
+        
+        let scoreHistory = [];
+        let activePlayerId = 'player1-container';
+
+        // Function to adjust viewport height on mobile devices
+        function adjustViewportHeight() {
+            let vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
+        }
+
+        window.addEventListener('load', adjustViewportHeight);
+        window.addEventListener('resize', adjustViewportHeight);
+        adjustViewportHeight();
+
+        // Function to update the score display
+        function updateScoreDisplay(scoreElement, newScore) {
+            scoreElement.textContent = newScore;
+            
+            // Check if the score is 3 digits or more and adjust font size
+            if (String(newScore).length >= 3) {
+                scoreElement.classList.add('three-digit');
+            } else {
+                scoreElement.classList.remove('three-digit');
+            }
+        }
+
+        // Function to calculate and update the score difference
+        function updateDiff() {
+            const score1 = parseInt(document.getElementById('player1-score').textContent);
+            const score2 = parseInt(document.getElementById('player2-score').textContent);
+            const diff = Math.abs(score1 - score2);
+            document.getElementById('diff-score').textContent = diff;
+        }
+        
+        // --- Text-to-Speech (TTS) usage ---
+        const scoreVoicesEnglish = {
+            1: 'One', 2: 'Two', 3: 'Three', 4: 'Four', 5: 'Five', 
+            6: 'Six', 7: 'Seven', 8: 'Eight', 10: 'Ten'
+        };
+        
+        // New function to speak the player's name
+        function speakPlayerName(playerName) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(playerName);
+            utterance.lang = 'en-US';
+            window.speechSynthesis.speak(utterance);
+        }
+        
+        // NEW: Function to play a simple "lead-in" tone (a quick "fit" sound)
+        function playLeadInTone() {
+            const context = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = context.createOscillator();
+            const gainNode = context.createGain();
+
+            oscillator.type = 'sine';
+            oscillator.frequency.value = 440; // Frequency for the tone
+            gainNode.gain.setValueAtTime(0.01, context.currentTime); // Very low volume
+            gainNode.gain.linearRampToValueAtTime(0.1, context.currentTime + 0.05);
+            gainNode.gain.linearRampToValueAtTime(0, context.currentTime + 0.2);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(context.destination);
+
+            oscillator.start(0);
+            oscillator.stop(context.currentTime + 0.2);
+        }
+
+        // Main function to handle score button clicks
+        function handleScoreClick(ballScore) {
+            window.speechSynthesis.cancel();
+            
+            const scoreDisplay = document.getElementById(activePlayerId.replace('-container', '-score'));
+            const currentScore = parseInt(scoreDisplay.textContent);
+            const newScore = currentScore + ballScore;
+            
+            updateScoreDisplay(scoreDisplay, newScore);
+            
+            scoreHistory.push({ type: 'score', player: activePlayerId, score: ballScore, oldScore: currentScore });
+            
+            updateDiff();
+
+            const scoreWord = scoreVoicesEnglish[ballScore] || ballScore.toString();
+            const pointWord = ballScore === 1 ? 'point' : 'points';
+            const ballScoreText = `${scoreWord} ${pointWord}`;
+            
+            const utteranceBallScore = new SpeechSynthesisUtterance(ballScoreText);
+            utteranceBallScore.lang = 'en-US';
+            
+            utteranceBallScore.onend = () => {
+                setTimeout(() => {
+                    const totalScoreText = newScore.toString();
+                    const utteranceTotalScore = new SpeechSynthesisUtterance(totalScoreText);
+                    utteranceTotalScore.lang = 'en-US';
+                    window.speechSynthesis.speak(utteranceTotalScore);
+                }, 500);
+            };
+            
+            window.speechSynthesis.speak(utteranceBallScore);
+        }
+
+        // Function to create the score buttons
+        function createButtons() {
+            const buttonsContainer = document.getElementById('score-buttons-row');
+            
+            buttonsContainer.innerHTML = ''; 
+            
+            ballScores.forEach(ball => {
+                const button = document.createElement('div');
+                button.className = 'snooker-ball ' + ball.color;
+                button.textContent = ball.score;
+                button.addEventListener('click', () => {
+                    handleScoreClick(ball.score);
+                });
+                buttonsContainer.appendChild(button);
+            });
+        }
+        
+        // --- Sound Generation Functions (UPDATED) ---
+        let audioContext;
+
+        function getAudioContext() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            return audioContext;
+        }
+
+        function playPercussion(frequency, duration, type = 'sine') {
+            const context = getAudioContext();
+            const oscillator = context.createOscillator();
+            const gainNode = context.createGain();
+
+            oscillator.type = type;
+            oscillator.frequency.value = frequency;
+
+            gainNode.gain.setValueAtTime(0.8, context.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, context.currentTime + duration);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(context.destination);
+
+            oscillator.start(0);
+            oscillator.stop(context.currentTime + duration);
+        }
+
+        function playFinishSound() {
+            const context = getAudioContext();
+            const now = context.currentTime;
+            const notes = [
+                { freq: 523.25, time: now, duration: 0.2 },
+                { freq: 659.25, time: now + 0.1, duration: 0.2 },
+                { freq: 783.99, time: now + 0.2, duration: 0.3 }
+            ];
+
+            notes.forEach(note => {
+                const oscillator = context.createOscillator();
+                const gainNode = context.createGain();
+                oscillator.type = 'triangle';
+                oscillator.frequency.value = note.freq;
+
+                gainNode.gain.setValueAtTime(0.5, note.time);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, note.time + note.duration);
+
+                oscillator.connect(gainNode);
+                gainNode.connect(context.destination);
+
+                oscillator.start(note.time);
+                oscillator.stop(context.currentTime + note.duration);
+            });
+        }
+
+        function playSetZeroSound() {
+            playPercussion(150, 0.1, 'square');
+        }
+        
+        function playUndoSound() {
+            const context = getAudioContext();
+            const oscillator = context.createOscillator();
+            const gainNode = context.createGain();
+
+            oscillator.type = 'sawtooth';
+            oscillator.frequency.setValueAtTime(440, context.currentTime);
+            oscillator.frequency.linearRampToValueAtTime(180, context.currentTime + 0.25);
+
+            gainNode.gain.setValueAtTime(0.5, context.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.25);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(context.destination);
+
+            oscillator.start(0);
+            oscillator.stop(context.currentTime + 0.25);
+        }
+
+        // --- Button Event Listeners (UPDATED) ---
+        document.querySelector('.finish-button').onclick = () => {
+            playFinishSound();
+            window.speechSynthesis.cancel();
+            
+            const score1 = parseInt(document.getElementById('player1-score').textContent);
+            const score2 = parseInt(document.getElementById('player2-score').textContent);
+            const frames1 = parseInt(document.getElementById('player1-frames').textContent);
+            const frames2 = parseInt(document.getElementById('player2-frames').textContent);
+
+            scoreHistory.push({ type: 'finish', score1: score1, score2: score2, frames1: frames1, frames2: frames2 });
+
+            let winnerId = null;
+
+            if (score1 > score2) {
+                winnerId = 'player1-container';
+            } else if (score2 > score1) {
+                winnerId = 'player2-container';
+            } else {
+                // If scores are equal, find the last player to score
+                let lastScoringPlayer = null;
+                for (let i = scoreHistory.length - 1; i >= 0; i--) {
+                    if (scoreHistory[i].type === 'score') {
+                        lastScoringPlayer = scoreHistory[i].player;
+                        break;
+                    }
+                }
+                
+                if (lastScoringPlayer) {
+                    winnerId = lastScoringPlayer;
+                } else {
+                    showMessage("คะแนนเสมอกัน", 3000);
+                }
+            }
+            
+            if (winnerId) {
+                const winnerName = document.getElementById(winnerId.replace('-container', '-name')).value;
+                const frameScoreElement = document.getElementById(winnerId.replace('container', 'frames'));
+                frameScoreElement.textContent = parseInt(frameScoreElement.textContent) + 1;
+                
+                const winMessage = `${winnerName} Win a Frame`;
+                const utteranceWin = new SpeechSynthesisUtterance(winMessage);
+                utteranceWin.lang = 'en-US';
+                window.speechSynthesis.speak(utteranceWin);
+            }
+
+            updateScoreDisplay(document.getElementById('player1-score'), 0);
+            updateScoreDisplay(document.getElementById('player2-score'), 0);
+            updateDiff();
+            createButtons();
+        };
+        
+        document.querySelector('.set-zero-button').onclick = () => {
+            playSetZeroSound();
+            updateScoreDisplay(document.getElementById('player1-score'), 0);
+            updateScoreDisplay(document.getElementById('player2-score'), 0);
+            updateDiff();
+            scoreHistory = [];
+            setActivePlayer('player1-container'); // เลือกผู้เล่น 1 อัตโนมัติเมื่อกด Set Zero
+            createButtons();
+        };
+
+        document.querySelector('.undo-button').onclick = () => {
+            playUndoSound();
+            if (scoreHistory.length > 0) {
+                const lastMove = scoreHistory.pop();
+                
+                if (lastMove.type === 'finish') {
+                    updateScoreDisplay(document.getElementById('player1-score'), lastMove.score1);
+                    updateScoreDisplay(document.getElementById('player2-score'), lastMove.score2);
+                    document.getElementById('player1-frames').textContent = lastMove.frames1;
+                    document.getElementById('player2-frames').textContent = lastMove.frames2;
+                } else {
+                    updateScoreDisplay(document.getElementById(lastMove.player.replace('-container', '-score')), lastMove.oldScore);
+                }
+                
+                // Keep the current active player, do not change after undo
+                updateDiff();
+                createButtons();
+            }
+        };
+
+        const player1NameInput = document.getElementById('player1-name');
+        const player2NameInput = document.getElementById('player2-name');
+        const player1Container = document.getElementById('player1-container');
+        const player2Container = document.getElementById('player2-container');
+        const editableElements = [
+            document.getElementById('player1-frames'),
+            document.getElementById('player2-frames')
+        ];
+
+        // NEW: Generic function to set up contenteditable elements
+        function setupEditable(element) {
+            element.contentEditable = true;
+            element.addEventListener('focus', () => {
+                element.classList.add('editing');
+                const range = document.createRange();
+                range.selectNodeContents(element);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+            });
+            element.addEventListener('blur', () => {
+                element.classList.remove('editing');
+            });
+            element.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    element.blur();
+                }
+            });
+        }
+        
+        // Loop through all editable elements and apply the setup function
+        editableElements.forEach(element => {
+            setupEditable(element);
+        });
+
+        function setupNameEditing(element) {
+            element.addEventListener('focus', () => {
+                element.classList.add('editing');
+                element.select();
+            });
+            element.addEventListener('blur', () => {
+                element.classList.remove('editing');
+            });
+            element.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    element.blur();
+                }
+            });
+        }
+        
+        setupNameEditing(player1NameInput);
+        setupNameEditing(player2NameInput);
+        
+        // Function to set the active player and update the UI
+        function setActivePlayer(playerId) {
+            if (activePlayerId === playerId) {
+                return;
+            }
+
+            const currentPlayer = document.getElementById(activePlayerId);
+            if (currentPlayer) {
+                currentPlayer.classList.remove('active');
+            }
+
+            activePlayerId = playerId;
+            document.getElementById(playerId).classList.add('active');
+
+            // Speak the name of the newly active player
+            const playerNameInput = document.getElementById(playerId).querySelector('.player-name');
+            if (playerNameInput) {
+                speakPlayerName(playerNameInput.value);
+            }
+        }
+
+
+        function handlePlayerSelection(event) {
+            const container = event.currentTarget;
+            setActivePlayer(container.id);
+        }
+
+        player1Container.addEventListener('click', handlePlayerSelection);
+        player2Container.addEventListener('click', handlePlayerSelection);
+        
+        createButtons();
+
+        // --- New Background Toggle Logic with brightness adjustment ---
+        const cgButton = document.getElementById('cg-button');
+        const homeButton = document.getElementById('home-button');
+        const body = document.body;
+        
+        const backgroundImages = [
+            'CothSS.jpg',
+            'image1.jpg',
+            'image2.jpg',
+            'image3.jpg',
+            'image4.jpg'
+        ];
+        
+        const githubBaseUrl = 'https://raw.githubusercontent.com/porice-star/SSC_V2/main/Background/';
+        
+        let currentImageIndex = 0;
+        
+        function changeBackground() {
+            if (backgroundImages.length === 0) {
+                console.error("No background images available.");
+                return;
+            }
+
+            const imageUrl = githubBaseUrl + backgroundImages[currentImageIndex];
+            const img = new Image();
+            
+            img.onload = () => {
+                body.style.backgroundImage = `url('${imageUrl}')`;
+                body.classList.add('background-image-mode');
+                const needsDarkening = backgroundImages[currentImageIndex].startsWith('image');
+                
+                if (needsDarkening) {
+                    body.classList.add('darken-background');
+                } else {
+                    body.classList.remove('darken-background');
+                }
+                
+                currentImageIndex = (currentImageIndex + 1) % backgroundImages.length;
+            };
+            
+            img.onerror = () => {
+                console.error(`Failed to load image: ${imageUrl}`);
+                showMessage("Failed to load image. Trying the next one...", 3000);
+                
+                currentImageIndex = (currentImageIndex + 1) % backgroundImages.length;
+                changeBackground();
+            };
+            
+            img.src = imageUrl;
+        }
+
+        function showMessage(message, duration) {
+            const messageBox = document.getElementById('message-box');
+            messageBox.textContent = message;
+            messageBox.classList.add('show');
+            setTimeout(() => {
+                messageBox.classList.remove('show');
+            }, duration);
+        }
+
+        cgButton.addEventListener('click', () => {
+            changeBackground();
+        });
+        
+        homeButton.addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
+
+        // --- UPDATED: Kar Score Keypad Logic ---
+        const karKeypadOverlay = document.getElementById('kar-keypad-overlay');
+        const karKeypadDisplay = document.getElementById('kar-keypad-display');
+        const karScores = {
+            'player1-kar-score': document.getElementById('player1-kar-score'),
+            'player2-kar-score': document.getElementById('player2-kar-score')
+        };
+        let currentEditingKarScoreElement = null;
+        let karCalculatorTotal = 0;
+        let pendingValue = '';
+        let pendingOperation = null;
+
+        document.querySelectorAll('.kar-score').forEach(element => {
+            element.addEventListener('click', () => {
+                currentEditingKarScoreElement = element;
+                karKeypadOverlay.style.display = 'flex';
+                element.classList.add('editing');
+
+                // Set initial keypad display value to the current score
+                karCalculatorTotal = parseInt(element.textContent, 10) || 0;
+                karKeypadDisplay.textContent = karCalculatorTotal;
+                pendingValue = '';
+                pendingOperation = null;
+            });
+        });
+
+        document.querySelectorAll('.kar-keypad-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const value = button.dataset.value;
+                if (!currentEditingKarScoreElement) return;
+
+                if (['plus', 'minus'].includes(value)) {
+                    // Operator button pressed
+                    if (pendingValue !== '') {
+                        karCalculatorTotal = pendingOperation ? applyOperation(karCalculatorTotal, pendingOperation, parseInt(pendingValue)) : parseInt(pendingValue);
+                    }
+                    karKeypadDisplay.textContent = karCalculatorTotal; // Update display with the new total
+                    pendingValue = '';
+                    pendingOperation = value;
+                } else if (value === 'delete') {
+                    // Delete button pressed
+                    if (pendingValue.length > 0) {
+                        pendingValue = pendingValue.slice(0, -1);
+                        const tempResult = pendingOperation ? applyOperation(karCalculatorTotal, pendingOperation, parseInt(pendingValue) || 0) : (parseInt(pendingValue) || karCalculatorTotal);
+                        karKeypadDisplay.textContent = pendingValue === '' && pendingOperation ? karCalculatorTotal : tempResult;
+                    } else {
+                        karCalculatorTotal = 0;
+                        pendingOperation = null;
+                        karKeypadDisplay.textContent = '0';
+                    }
+                } else if (value === 'done') {
+                    // OK button pressed
+                    if (pendingValue !== '') {
+                        karCalculatorTotal = pendingOperation ? applyOperation(karCalculatorTotal, pendingOperation, parseInt(pendingValue)) : parseInt(pendingValue);
+                    }
+                    currentEditingKarScoreElement.textContent = karCalculatorTotal;
+                    currentEditingKarScoreElement.classList.remove('editing');
+                    karKeypadOverlay.style.display = 'none';
+                    currentEditingKarScoreElement = null;
+                    karCalculatorTotal = 0;
+                    pendingValue = '';
+                    pendingOperation = null;
+                } else {
+                    // Number button pressed
+                    if (pendingValue.length > 2) return;
+                    pendingValue += value;
+                    
+                    // Real-time calculation for display
+                    const tempResult = pendingOperation ? applyOperation(karCalculatorTotal, pendingOperation, parseInt(pendingValue)) : parseInt(pendingValue);
+                    karKeypadDisplay.textContent = tempResult;
+                }
+            });
+        });
+
+        function applyOperation(total, operation, value) {
+            value = isNaN(value) ? 0 : value;
+            switch (operation) {
+                case 'plus':
+                    return total + value;
+                case 'minus':
+                    return total - value;
+                default:
+                    return value;
+            }
+        }
+    </script>
+</body>
+</html>
