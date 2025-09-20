@@ -472,28 +472,6 @@
             transform: translateY(1px);
             box-shadow: 1px 1px 3px rgba(0,0,0,0.2);
         }
-
-        .message-box {
-            position: absolute;
-            bottom: 5%;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 1vmin 2vmin;
-            border-radius: 1vw;
-            font-size: 2.5vmin;
-            text-align: center;
-            visibility: hidden;
-            opacity: 0;
-            transition: opacity 0.5s ease-in-out;
-            z-index: 100;
-        }
-        
-        .message-box.show {
-            visibility: visible;
-            opacity: 1;
-        }
         
         /* Numeric keypad */
         .keypad-modal {
@@ -698,8 +676,6 @@
             <button class="action-button home-button" id="cg-button">CG</button>
         </div>
     </div>
-
-    <div id="message-box" class="message-box"></div>
     
     <div id="keypad-modal" class="keypad-modal">
         <div class="keypad-container">
@@ -740,6 +716,7 @@
         let scoreHistory = [];
         let scoreSign = 1;
         let targetElement = null;
+        let lastScoringPlayerId = null; // New variable to track the last player to score
 
         // Background image settings
         let backgroundImages = [
@@ -931,6 +908,9 @@
             // Update the score display immediately
             updateScoreDisplay(scoreDisplay, newScore);
             
+            // Record the last player to score
+            lastScoringPlayerId = activePlayerId;
+            
             // Speak the point value and the player's new total score
             if (scoreSign === 1) {
                 speak(`${score} point.`);
@@ -947,13 +927,15 @@
         
         // Function to save the current game state
         function saveState() {
-            const snapshot = {};
+            const snapshot = {
+                scores: {},
+                frames: {},
+                lastScoringPlayerId: lastScoringPlayerId
+            };
             document.querySelectorAll('.player-container').forEach(container => {
                 const id = container.getAttribute('data-player-id');
-                snapshot[id] = {
-                    score: parseInt(document.getElementById(id + '-score').textContent),
-                    frames: parseInt(document.getElementById(id + '-frames').textContent)
-                };
+                snapshot.scores[id] = parseInt(document.getElementById(id + '-score').textContent);
+                snapshot.frames[id] = parseInt(document.getElementById(id + '-frames').textContent);
             });
             scoreHistory.push(snapshot);
         }
@@ -996,21 +978,14 @@
             resetScoreSign();
         }
         
-        function showMessage(text, duration = 3000) {
-            const messageBox = document.getElementById('message-box');
-            messageBox.textContent = text;
-            messageBox.classList.add('show');
-            setTimeout(() => {
-                messageBox.classList.remove('show');
-            }, duration);
-        }
-        
         // Add event listeners to score balls
         document.querySelectorAll('.snooker-ball').forEach(button => {
             button.addEventListener('click', (e) => {
                 const score = e.target.getAttribute('data-score');
-                if (score) {
+                if (activePlayerId && score) {
                     handleScoreClick(score);
+                } else if (!activePlayerId) {
+                    console.log("กรุณาเลือกผู้เล่นก่อน");
                 }
             });
         });
@@ -1034,6 +1009,8 @@
                     }
                     scoreEl.textContent = current;
                 }
+            } else {
+                 console.log("กรุณาเลือกผู้เล่นก่อน");
             }
         });
 
@@ -1055,23 +1032,51 @@
             // บันทึกสถานะก่อนการเปลี่ยนแปลง
             saveState();
 
-            const framesDisplay = document.getElementById(activePlayerId + '-frames');
-            const currentFrames = parseInt(framesDisplay.textContent);
+            // Get all player scores
+            const playerScores = {
+                'player-a': parseInt(document.getElementById('player-a-score').textContent),
+                'player-b': parseInt(document.getElementById('player-b-score').textContent),
+                'player-c': parseInt(document.getElementById('player-c-score').textContent)
+            };
+
+            // Find the maximum score
+            const scores = Object.values(playerScores);
+            const maxScore = Math.max(...scores);
+
+            // Find all players with the maximum score
+            const potentialWinners = Object.keys(playerScores).filter(playerId => playerScores[playerId] === maxScore);
+
+            let winningPlayerId;
+            if (potentialWinners.length === 1) {
+                // If there's a single winner, that's it
+                winningPlayerId = potentialWinners[0];
+            } else {
+                // Tie-breaker: Check if the last scoring player is among the potential winners
+                if (lastScoringPlayerId && potentialWinners.includes(lastScoringPlayerId)) {
+                    winningPlayerId = lastScoringPlayerId;
+                } else {
+                    // Fallback to the first player in the list if no one has scored yet
+                    // or if the last scorer isn't a winner
+                    winningPlayerId = potentialWinners[0];
+                }
+            }
 
             // Update frame score of the winning player
-            const newFrames = currentFrames + 1;
-            framesDisplay.textContent = newFrames;
+            const winningFramesDisplay = document.getElementById(winningPlayerId + '-frames');
+            const currentFrames = parseInt(winningFramesDisplay.textContent);
+            winningFramesDisplay.textContent = currentFrames + 1;
+
+            // Get winner's name and speak it
+            const winnerName = document.getElementById(winningPlayerId + '-name').textContent;
+            speak(`${winnerName} wins a frame.`);
 
             // Reset scores of all players to 0
             document.querySelectorAll('.player-score').forEach(scoreElement => {
                 updateScoreDisplay(scoreElement, 0);
             });
             
-            // Speak the update
-            const playerName = document.getElementById(activePlayerId + '-name').textContent;
-            speak(`${playerName} wins a frame.`);
-            
             resetScoreSign();
+            lastScoringPlayerId = null; // Reset last scoring player for the new frame
         });
 
         document.querySelector('.set-zero-button').addEventListener('click', () => {
@@ -1084,6 +1089,7 @@
             });
             
             resetScoreSign();
+            lastScoringPlayerId = null; // Reset last scoring player
             
             speak("Score set to zero.");
         });
@@ -1093,19 +1099,21 @@
                 const lastState = scoreHistory.pop();
                 
                 // Restore state from snapshot
-                for (const playerId in lastState) {
-                    const playerState = lastState[playerId];
-                    updateScoreDisplay(document.getElementById(playerId + '-score'), playerState.score);
-                    document.getElementById(playerId + '-frames').textContent = playerState.frames;
+                for (const playerId in lastState.scores) {
+                    updateScoreDisplay(document.getElementById(playerId + '-score'), lastState.scores[playerId]);
+                    document.getElementById(playerId + '-frames').textContent = lastState.frames[playerId];
                 }
-                
+
+                // Restore lastScoringPlayerId
+                lastScoringPlayerId = lastState.lastScoringPlayerId;
+
                 // Play sound
                 playUndoSound();
                 speak("Undo.");
                 
             } else {
                 // Keep the original behavior for when there's nothing to undo
-                showMessage('ไม่มีการกระทำที่สามารถยกเลิกได้.', 2000);
+                console.log('ไม่มีการกระทำที่สามารถยกเลิกได้.');
             }
             resetScoreSign();
         });
@@ -1237,7 +1245,7 @@
             
             img.onerror = () => {
                 console.error(`Failed to load image: ${imageUrl}`);
-                showMessage("ไม่สามารถโหลดรูปภาพได้ กำลังลองรูปถัดไป...", 3000);
+                console.log("ไม่สามารถโหลดรูปภาพได้ กำลังลองรูปถัดไป...");
                 
                 currentImageIndex++;
                 changeBackground();
