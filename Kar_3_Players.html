@@ -694,7 +694,7 @@
             <button class="action-button finish-button">Finish</button>
             <button class="action-button set-zero-button">Set Zero</button>
             <button class="action-button undo-button">Undo</button>
-            <button class="action-button home-button" id="home-button">🏡</button>
+            <button class="action-button home-button" id="home-button" onclick="goToHomePage()">🏡</button>
             <button class="action-button home-button" id="cg-button">CG</button>
         </div>
     </div>
@@ -1249,6 +1249,10 @@
         cgButton.addEventListener('click', () => {
             changeBackground();
         });
+        
+        function goToHomePage() {
+            window.location.href = 'index.html';
+        }
     </script>
 </body>
 </html>
