@@ -1106,20 +1106,26 @@
         
         createButtons();
 
-        // --- New Background Toggle Logic with brightness adjustment ---
+        // --- Background Toggle Logic (NEW & IMPROVED) ---
         const cgButton = document.getElementById('cg-button');
         const homeButton = document.getElementById('home-button');
         const body = document.body;
         
+        // Check if the script is running in the Canvas environment (e.g., in a development iframe)
+        const isCanvasEnvironment = typeof __app_id !== 'undefined';
+
+        // Define the base URL. If in Canvas, use the full GitHub path. Otherwise, use a relative path.
+        const githubBaseUrl = 'https://raw.githubusercontent.com/Chaiwat-Saelim/KAR/main/KAR_1_Players/';
+        const backgroundBaseUrl = isCanvasEnvironment ? githubBaseUrl : './'; // Use relative path if not in Canvas
+
         const backgroundImages = [
-            'CothSS.jpg',
-            'image1.jpg',
-            'image2.jpg',
-            'image3.jpg',
-            'image4.jpg'
+            'Background/CothSS.jpg',
+            'Background/image1.jpg',
+            'Background/image2.jpg',
+            'Background/image3.jpg',
+            'Background/image4.jpg'
         ];
-        
-        const githubBaseUrl = 'https://raw.githubusercontent.com/porice-star/SSC_V2/main/Background/';
+
         
         let currentImageIndex = 0;
         
@@ -1129,13 +1135,13 @@
                 return;
             }
 
-            const imageUrl = githubBaseUrl + backgroundImages[currentImageIndex];
+            const imageUrl = backgroundBaseUrl + backgroundImages[currentImageIndex];
             const img = new Image();
             
             img.onload = () => {
                 body.style.backgroundImage = `url('${imageUrl}')`;
                 body.classList.add('background-image-mode');
-                const needsDarkening = backgroundImages[currentImageIndex].startsWith('image');
+                const needsDarkening = backgroundImages[currentImageIndex].startsWith('Background/image');
                 
                 if (needsDarkening) {
                     body.classList.add('darken-background');
