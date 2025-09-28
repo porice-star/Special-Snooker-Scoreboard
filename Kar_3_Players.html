@@ -60,9 +60,10 @@
         }
 
         .player-container.active {
-            border-color: #FFFF00;
+            /* แก้ไขตามคำขอ: กรอบสีแดง (#FF0000) และความหนา 3px */
+            border: 3px solid #FF0000;
             background-color: rgba(255, 255, 255, 0.1);
-            box-shadow: 0 0 15px rgba(255, 255, 0, 0.5);
+            box-shadow: 0 0 15px rgba(255, 255, 0, 0.5); /* ยังคงใช้เงาสีเหลืองตามคำสั่งให้ Fix ส่วนอื่นไว้ */
         }
 
         /* Unique background colors for each player in green tone */
@@ -472,6 +473,28 @@
             transform: translateY(1px);
             box-shadow: 1px 1px 3px rgba(0,0,0,0.2);
         }
+
+        .message-box {
+            position: absolute;
+            bottom: 5%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 1vmin 2vmin;
+            border-radius: 1vw;
+            font-size: 2.5vmin;
+            text-align: center;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            z-index: 100;
+        }
+        
+        .message-box.show {
+            visibility: visible;
+            opacity: 1;
+        }
         
         /* Numeric keypad */
         .keypad-modal {
@@ -676,6 +699,8 @@
             <button class="action-button home-button" id="cg-button">CG</button>
         </div>
     </div>
+
+    <div id="message-box" class="message-box"></div>
     
     <div id="keypad-modal" class="keypad-modal">
         <div class="keypad-container">
@@ -978,6 +1003,15 @@
             resetScoreSign();
         }
         
+        function showMessage(text, duration = 3000) {
+            const messageBox = document.getElementById('message-box');
+            messageBox.textContent = text;
+            messageBox.classList.add('show');
+            setTimeout(() => {
+                messageBox.classList.remove('show');
+            }, duration);
+        }
+        
         // Add event listeners to score balls
         document.querySelectorAll('.snooker-ball').forEach(button => {
             button.addEventListener('click', (e) => {
@@ -985,7 +1019,7 @@
                 if (activePlayerId && score) {
                     handleScoreClick(score);
                 } else if (!activePlayerId) {
-                    console.log("กรุณาเลือกผู้เล่นก่อน");
+                    showMessage("กรุณาเลือกผู้เล่นก่อน", 2000);
                 }
             });
         });
@@ -1010,7 +1044,7 @@
                     scoreEl.textContent = current;
                 }
             } else {
-                 console.log("กรุณาเลือกผู้เล่นก่อน");
+                 showMessage("กรุณาเลือกผู้เล่นก่อน", 2000);
             }
         });
 
@@ -1069,6 +1103,7 @@
             // Get winner's name and speak it
             const winnerName = document.getElementById(winningPlayerId + '-name').textContent;
             speak(`${winnerName} wins a frame.`);
+            showMessage(`${winnerName} ชนะเฟรมนี้!`);
 
             // Reset scores of all players to 0
             document.querySelectorAll('.player-score').forEach(scoreElement => {
@@ -1113,7 +1148,7 @@
                 
             } else {
                 // Keep the original behavior for when there's nothing to undo
-                console.log('ไม่มีการกระทำที่สามารถยกเลิกได้.');
+                showMessage('ไม่มีการกระทำที่สามารถยกเลิกได้.', 2000);
             }
             resetScoreSign();
         });
@@ -1245,7 +1280,7 @@
             
             img.onerror = () => {
                 console.error(`Failed to load image: ${imageUrl}`);
-                console.log("ไม่สามารถโหลดรูปภาพได้ กำลังลองรูปถัดไป...");
+                showMessage("ไม่สามารถโหลดรูปภาพได้ กำลังลองรูปถัดไป...", 3000);
                 
                 currentImageIndex++;
                 changeBackground();
