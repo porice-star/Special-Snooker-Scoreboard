@@ -140,10 +140,10 @@
             padding-top: 6vh;
         }
 
-        /* Active player border and shadow */
+        /* Active player border and shadow (UPDATED: RED and THICKER) */
         .player-side-container.active {
-            border-color: #FFD700;
-            box-shadow: 0 0 15px #FFD700;
+            border: 4px solid #FF0000; /* เปลี่ยนเป็นสีแดง (#FF0000) และเพิ่มความหนาเป็น 4px */
+            box-shadow: 0 0 18px #FF0000; /* เปลี่ยนเงาเป็นสีแดงและเพิ่มความเข้มเล็กน้อย */
         }
         
         .player-side-container > :first-child {
@@ -195,7 +195,8 @@
         }
         
         .player-score {
-            font-size: 51.0705vmin; /* Reduced by 10% from 56.745vmin */
+            /* **แก้ไขตรงนี้:** ลดขนาดฟอนต์เพื่อป้องกันการล้นและให้มีระยะห่างเมื่อคะแนนเป็น 2 หลัก */
+            font-size: 48vmin; /* Adjusted from 51.0705vmin */
             font-weight: normal;
             color: #FFFFFF;
             line-height: 0.8;
@@ -208,7 +209,8 @@
         
         /* New CSS class to adjust font size for three-digit scores */
         .player-score.three-digit {
-            font-size: 36.45vmin; /* Reduced by 10% from 40.5vmin */
+            /* **แก้ไขตรงนี้:** ลดขนาดฟอนต์เพื่อป้องกันการล้นเมื่อคะแนนเป็น 3 หลัก */
+            font-size: 34.5vmin; /* Adjusted from 36.45vmin */
         }
         
         /* New container for the Control buttons at the bottom */
@@ -515,6 +517,53 @@
             color: #FFD700; /* Highlight color when editing */
         }
         
+        /* ---------------------------------------------------- */
+        /* START: FIX FOR LARGE COLON (เครื่องหมาย :) */
+        /* ---------------------------------------------------- */
+
+        /* สไตล์สำหรับเครื่องหมาย : ของคะแนน FRAME */
+        .frame-separator {
+            /* ปรับขนาดตามคำขอ: 14vmin */
+            font-size: 14vmin; 
+            /* ปรับความหนาตามคำขอ: 800 */
+            font-weight: 800; 
+            color: #FFFF00; /* สีเหลืองทองให้ตัดกับพื้น */
+            line-height: 0.8; 
+            
+            /* รักษาส่วนนี้ไว้เพื่อ Fix ตำแหน่งให้อยู่ตรงกลางตามโครงสร้างเดิม */
+            margin-left: -1vw; 
+            margin-right: -1vw;
+            
+            /* เพิ่มเงาเพื่อความคมชัด */
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5), 0 0 5px #FFFF00;
+        }
+
+        /* สไตล์สำหรับเครื่องหมาย : ของคะแนนพิเศษ KAR */
+        .kar-separator {
+            /* ปรับขนาดตามคำขอ: 14vmin */
+            font-size: 14vmin; 
+            /* ปรับความหนาตามคำขอ: 800 */
+            font-weight: 800; 
+            color: white; /* สีขาวให้เข้ากับตัวเลข KAR Score */
+            line-height: 0.8; 
+
+            /* รักษาส่วนนี้ไว้เพื่อ Fix ตำแหน่งให้อยู่ตรงกลางตามโครงสร้างเดิม */
+            margin-left: -1vw; 
+            margin-right: -1vw;
+            
+            /* ใช้ text-shadow แบบเดียวกับตัวเลข KAR Score เพื่อความกลมกลืน */
+            text-shadow: 
+                -2px -2px 0 #FF0000, 
+                2px -2px 0 #FF0000, 
+                -2px 2px 0 #FF0000, 
+                2px 2px 0 #FF0000,
+                0 0 5px #FFFFFF;
+        }
+
+        /* ---------------------------------------------------- */
+        /* END: FIX FOR LARGE COLON (เครื่องหมาย :) */
+        /* ---------------------------------------------------- */
+        
         /* NEW: Styling for the keypad overlay */
         .kar-keypad-overlay {
             position: fixed;
@@ -719,16 +768,25 @@
             }, false);
         }
 
+        // --- Auto-Switch Timer Variables ---
+        let autoSwitchTimer = null;
+        // 20000 ms = 20 seconds
+        const AUTO_SWITCH_DURATION = 20000; 
+        
+        // NEW: Tracks if the timer is currently running/should be running for the active break.
+        let timerActiveInBreak = false; 
+
         window.onload = function() {
             preventZoom();
-            // เมื่อหน้าเว็บโหลดเสร็จ ให้เล่นเสียง "ฟิต" ก่อน จากนั้นค่อยเลือกผู้เล่น 1 อัตโนมัติและขานชื่อ
-            // Note: This might not work on some browsers due to autoplay policies.
+            // เมื่อหน้าเว็บโหลดเสร็จ ให้เล่นเสียง "ฟิต" ก่อน จากนั้นค่อยเลือกผู้เล่น 1 อัตโนมัติ
             playLeadInTone();
             setTimeout(() => {
-                setActivePlayer('player1-container');
-                const player1Name = document.getElementById('player1-name').value;
-                speakPlayerName(player1Name);
-            }, 500); // ดีเลย์เล็กน้อยเพื่อให้เสียงนำเล่นก่อน
+                // setActivePlayer จะขานชื่อ (speakName=true โดย default)
+                setActivePlayer('player1-container'); 
+                // กำหนดให้ timerActiveInBreak เป็น false เมื่อเริ่มเกมใหม่
+                timerActiveInBreak = false; 
+                stopAutoSwitchTimer();
+            }, 500);
         };
 
         // Snooker ball scores data
@@ -746,6 +804,7 @@
         
         let scoreHistory = [];
         let activePlayerId = 'player1-container';
+        let currentActivePlayerNumber = 1; // 1 or 2
 
         // Function to adjust viewport height on mobile devices
         function adjustViewportHeight() {
@@ -841,6 +900,14 @@
             };
             
             window.speechSynthesis.speak(utteranceBallScore);
+
+            // NEW LOGIC: เริ่มนับเวลา Auto-Switch เมื่อมีการใส่คะแนนครั้งแรกในเบรก
+            if (!timerActiveInBreak) {
+                timerActiveInBreak = true;
+                resetAutoSwitchTimer();
+            } else {
+                resetAutoSwitchTimer();
+            }
         }
 
         // Function to create the score buttons
@@ -939,6 +1006,11 @@
 
         // --- Button Event Listeners (UPDATED) ---
         document.querySelector('.finish-button').onclick = () => {
+            // หยุด Auto-switch timer เมื่อเฟรมจบ
+            stopAutoSwitchTimer();
+            // รีเซ็ตสถานะการนับเวลาสำหรับเบรกถัดไป
+            timerActiveInBreak = false; 
+
             playFinishSound();
             window.speechSynthesis.cancel();
             
@@ -990,16 +1062,25 @@
         };
         
         document.querySelector('.set-zero-button').onclick = () => {
+            // หยุด Auto-switch timer เมื่อรีเซ็ตคะแนน
+            stopAutoSwitchTimer();
+            // รีเซ็ตสถานะการนับเวลา
+            timerActiveInBreak = false; 
+            
             playSetZeroSound();
             updateScoreDisplay(document.getElementById('player1-score'), 0);
             updateScoreDisplay(document.getElementById('player2-score'), 0);
             updateDiff();
             scoreHistory = [];
-            setActivePlayer('player1-container'); // เลือกผู้เล่น 1 อัตโนมัติเมื่อกด Set Zero
+            // เลือกผู้เล่น 1 อัตโนมัติเมื่อกด Set Zero
+            setActivePlayer('player1-container'); 
             createButtons();
         };
 
         document.querySelector('.undo-button').onclick = () => {
+            // หยุด Auto-switch timer หลังจาก Undo
+            stopAutoSwitchTimer();
+
             playUndoSound();
             if (scoreHistory.length > 0) {
                 const lastMove = scoreHistory.pop();
@@ -1075,7 +1156,7 @@
         setupNameEditing(player2NameInput);
         
         // Function to set the active player and update the UI
-        function setActivePlayer(playerId) {
+        function setActivePlayer(playerId, speakName = true) {
             if (activePlayerId === playerId) {
                 return;
             }
@@ -1087,18 +1168,27 @@
 
             activePlayerId = playerId;
             document.getElementById(playerId).classList.add('active');
+            currentActivePlayerNumber = playerId === 'player1-container' ? 1 : 2;
 
-            // Speak the name of the newly active player
-            const playerNameInput = document.getElementById(playerId).querySelector('.player-name');
-            if (playerNameInput) {
-                speakPlayerName(playerNameInput.value);
+            if (speakName) {
+                const playerNameInput = document.getElementById(playerId).querySelector('.player-name');
+                if (playerNameInput) {
+                    speakPlayerName(playerNameInput.value);
+                }
             }
+            
+            // หมายเหตุ: ไม่มีการเรียก resetAutoSwitchTimer() ที่นี่อีกต่อไป
+            // การนับเวลาจะเริ่มเมื่อมีการทำคะแนนเท่านั้น
         }
 
 
         function handlePlayerSelection(event) {
             const container = event.currentTarget;
+            // Manual click: TTS is enabled (default true)
             setActivePlayer(container.id);
+            // เมื่อเปลี่ยนผู้เล่นด้วยมือ ให้รีเซ็ตสถานะการนับเวลา (เพราะถือเป็นการเริ่มเบรกใหม่ด้วยมือ)
+            stopAutoSwitchTimer();
+            timerActiveInBreak = false;
         }
 
         player1Container.addEventListener('click', handlePlayerSelection);
@@ -1177,10 +1267,12 @@
         });
         
         homeButton.addEventListener('click', () => {
-            window.location.href = 'index.html';
+            // Note: This link needs to be relative or absolute based on deployment.
+            // Assuming 'index.html' is a common starting point.
+            window.location.href = 'index.html'; 
         });
 
-        // --- UPDATED: Kar Score Keypad Logic ---
+        // --- Kar Score Keypad Logic ---
         const karKeypadOverlay = document.getElementById('kar-keypad-overlay');
         const karKeypadDisplay = document.getElementById('kar-keypad-display');
         const karScores = {
@@ -1194,6 +1286,15 @@
 
         document.querySelectorAll('.kar-score').forEach(element => {
             element.addEventListener('click', () => {
+                // Ensure only active player can edit KAR score
+                const elementId = element.id;
+                const playerNumber = elementId.includes('player1') ? 1 : 2;
+                
+                if (playerNumber !== currentActivePlayerNumber) {
+                    showMessage("กรุณาแตะผู้เล่นที่ถูกต้องเพื่อเปลี่ยน Kar Score", 2000);
+                    return;
+                }
+
                 currentEditingKarScoreElement = element;
                 karKeypadOverlay.style.display = 'flex';
                 element.classList.add('editing');
@@ -1203,6 +1304,14 @@
                 karKeypadDisplay.textContent = karCalculatorTotal;
                 pendingValue = '';
                 pendingOperation = null;
+
+                // NEW LOGIC: เปิด Keypad ถือเป็นการทำกิจกรรมอย่างหนึ่ง เริ่มนับเวลา Auto-Switch
+                if (!timerActiveInBreak) {
+                    timerActiveInBreak = true;
+                    resetAutoSwitchTimer();
+                } else {
+                    resetAutoSwitchTimer();
+                }
             });
         });
 
@@ -1210,6 +1319,9 @@
             button.addEventListener('click', () => {
                 const value = button.dataset.value;
                 if (!currentEditingKarScoreElement) return;
+
+                // รีเซ็ต Timer เมื่อมีการกด Keypad (Activity)
+                resetAutoSwitchTimer();
 
                 if (['plus', 'minus'].includes(value)) {
                     // Operator button pressed
@@ -1232,6 +1344,10 @@
                     }
                 } else if (value === 'done') {
                     // OK button pressed
+                    // หยุด Auto-switch timer บน Keypad
+                    stopAutoSwitchTimer();
+                    timerActiveInBreak = false; // รีเซ็ตสถานะการนับเวลาสำหรับผู้เล่นคนถัดไป
+
                     if (pendingValue !== '') {
                         karCalculatorTotal = pendingOperation ? applyOperation(karCalculatorTotal, pendingOperation, parseInt(pendingValue)) : parseInt(pendingValue);
                     }
@@ -1242,6 +1358,9 @@
                     karCalculatorTotal = 0;
                     pendingValue = '';
                     pendingOperation = null;
+
+                    // Auto-switch active player after KAR score is confirmed
+                    autoSwitchPlayer(); 
                 } else {
                     // Number button pressed
                     if (pendingValue.length > 2) return;
@@ -1265,6 +1384,70 @@
                     return value;
             }
         }
+        
+        /* ---------------------------------------------------- */
+        /* NEW LOGIC: Auto-Switch Timer (20 Seconds) */
+        /* ---------------------------------------------------- */
+        
+        /**
+         * Clears the current timer and starts a new 20-second timer.
+         */
+        function resetAutoSwitchTimer() {
+            // 1. Clear any existing timer
+            if (autoSwitchTimer) {
+                clearTimeout(autoSwitchTimer);
+                autoSwitchTimer = null;
+            }
+
+            // 2. Set a new timer
+            console.log(`[Auto-Switch] Timer started for Player ${currentActivePlayerNumber}. 20 seconds to auto-switch.`);
+            autoSwitchTimer = setTimeout(() => {
+                console.log(`[Auto-Switch] 20 seconds elapsed. Auto-switching active player.`);
+                
+                // If keypad is open, close it before switching
+                if (karKeypadOverlay.style.display === 'flex') {
+                    // Clean up keypad state (similar to cancel/done)
+                    if (currentEditingKarScoreElement) {
+                        currentEditingKarScoreElement.classList.remove('editing');
+                    }
+                    karKeypadOverlay.style.display = 'none';
+                    currentEditingKarScoreElement = null;
+                }
+
+                autoSwitchPlayer();
+                
+                // Ensure timer variable is nullified
+                autoSwitchTimer = null;
+
+            }, AUTO_SWITCH_DURATION);
+        }
+
+        /**
+         * Stops the auto-switch timer. 
+         */
+        function stopAutoSwitchTimer() {
+            if (autoSwitchTimer) {
+                clearTimeout(autoSwitchTimer);
+                autoSwitchTimer = null;
+                console.log('[Auto-Switch] Timer stopped.');
+            }
+        }
+
+        /**
+         * Logic to switch the active player.
+         */
+        function autoSwitchPlayer() {
+            const newPlayerNumber = currentActivePlayerNumber === 1 ? 2 : 1;
+            const newPlayerId = newPlayerNumber === 1 ? 'player1-container' : 'player2-container';
+            // สลับผู้เล่นอัตโนมัติ (Auto-Switch) โดยกำหนด speakName เป็น false เพื่อไม่ให้มีการขานชื่อ
+            setActivePlayer(newPlayerId, false); 
+            
+            // NEW LOGIC: รีเซ็ตสถานะการนับเวลาสำหรับผู้เล่นใหม่ (รอคะแนนก่อนถึงจะเริ่มนับ)
+            timerActiveInBreak = false; 
+            stopAutoSwitchTimer(); // Just ensure it's stopped.
+        }
+
+        
     </script>
 </body>
 </html>
